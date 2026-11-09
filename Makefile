@@ -3,7 +3,7 @@ flags := -Wall -Wpedantic
 
 .PHONY: clean
 
-snake: snake.c input.o
+snake: snake.c rings.h input.o
 	$(CC) $(flags) -o snake snake.c input.o
 
 input.o: input.c

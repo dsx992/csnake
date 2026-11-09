@@ -3,6 +3,8 @@
 #include "input.h"
 #include <time.h>
 #include <stdlib.h>
+#include "rings.h"
+
 
 #define WIDTH 25
 #define HEIGHT 25
@@ -23,13 +25,15 @@ void clear_screen()
 	printf("\033[2J");
 }
 
-struct point snake = {.x = 10, .y = 10};
-
 int handle_key(char);
+
+RING(ring, char, 25 * 25) snake;
+char board[25][25] = { 0 };
 
 int main()
 {
 	char c;
+
 	input_init();
 	atexit(&input_finish);
 
@@ -40,8 +44,8 @@ int main()
 		if (!handle_key(c))
 			break;
 
-		printf("\033[%i;%iH", snake.y, snake.x * 2);
-		printf("[]");
+		// printf("\033[%i;%iH", snake.y, snake.x * 2);
+		// printf("[]");
 		fflush(stdout);
 		nanosleep(&rqtp, NULL);
 	}

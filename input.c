@@ -3,6 +3,8 @@
 #include <termios.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "rings.h"
+#include "rings.h"
 
 /*
  * Overwriting ring buffer.
@@ -12,52 +14,20 @@
  */
 #define RING_SIZE (2 << 3)
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-static int head = -1;
-static int tail = 0;
-static char data[RING_SIZE];
+static RING(, char, RING_SIZE) ring;
 
 static struct termios term;
 pthread_t tid;
-
-static int incr(int x)
-{
-	return (x + 1) % RING_SIZE;
-}
-
-static int empty()
-{
-	return incr(head) == tail;
-}
 
 
 static void push(char c)
 {
 	pthread_mutex_lock(&lock);
 
-	/* ring is full */
-	if (tail == head)
-		head = incr(head);
-
-	data[tail] = c;
-	tail = incr(tail);
+	RING_PUSH(c, ring);
 
 	pthread_mutex_unlock(&lock);
 }
-
-static char pop()
-{
-	char c;
-	pthread_mutex_lock(&lock);
-
-	if (empty())
-		c = 0;
-	else
-		c = data[head = incr(head)];
-
-	pthread_mutex_unlock(&lock);
-	return c;
-}
-
 
 static void init_term()
 {
@@ -106,5 +76,12 @@ void input_finish()
 
 char input_get()
 {
-	return pop();
+	char c;
+	pthread_mutex_lock(&lock);
+
+	c = RING_PEEK_HEAD(ring);
+	RING_REMOVE_HEAD(ring);
+
+	pthread_mutex_unlock(&lock);
+	return c;
 }

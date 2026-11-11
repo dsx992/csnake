@@ -25,22 +25,45 @@
 		int tail;		\
 		TYPE data[SIZE];	\
 	}
-
+#define LENGTH(X) (sizeof(X) / sizeof(X[0]))
 #define RING_COUNT(RING) RING.count
-#define RING_PUSH(X, R) do {			\
-	size_t sz = sizeof(R.data) / sizeof(R.data[0]); \
+#define RING_PUSH_TAIL(X, R) do {		\
 	R.data[R.tail] = X;			\
-	R.tail = (R.tail + 1) % sz;		\
-	if (R.count == sz)			\
-		R.head = (R.head + 1) % sz;	\
+	R.tail = (R.tail + 1) % LENGTH(R.data);	\
+	if (R.count == LENGTH(R.data))			\
+		R.head = (R.head + 1) % LENGTH(R.data);	\
 	else					\
 		R.count++;			\
 } while (0)
-#define RING_PEEK_HEAD(R) (RING_COUNT(R) == 0 ? 0 : R.data[R.head])
+#define RING_PUSH_HEAD(X, R) do {		\
+	R.head = R.head - 1 < 0			\
+		? LENGTH(R.data) - 1		\
+		: (R.head - 1);			\
+	R.data[R.head] = X;			\
+	if (R.count == LENGTH(R.data))		\
+		R.tail = R.tail - 1 < 0		\
+			? LENGTH(R.data) - 1	\
+			: (R.tail - 1);		\
+	else					\
+		R.count++;			\
+} while (0)
+#define RING_PEEK(I, R) (R.data[(R.head + I) % LENGTH(R.data)])
+#define RING_PEEK_HEAD(R) (R.data[R.head])
+#define RING_PEEK_TAIL(R)			\
+	(R.data[R.tail - 1 < 0			\
+	 	? LENGTH(R.data) - 1		\
+	 	: R.tail - 1])
 #define RING_REMOVE_HEAD(R) do {		\
-	size_t sz = sizeof(R.data) / sizeof(R.data[0]); \
 	if (RING_COUNT(R) > 0) {		\
-		R.head = (R.head + 1) % sz;	\
+		R.head = (R.head + 1) % LENGTH(R.data);	\
+		R.count--; 			\
+	}					\
+} while (0)
+#define RING_REMOVE_TAIL(R) do {		\
+	if (RING_COUNT(R) > 0) {		\
+		R.tail = R.tail - 1 < 0		\
+		? LENGTH(R.data) - 1		\
+		: R.tail - 1;			\
 		R.count--; 			\
 	}					\
 } while (0)

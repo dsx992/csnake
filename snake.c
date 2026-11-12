@@ -60,6 +60,7 @@ RING(, enum direction, 4) direction;
 
 const int speed = 7;
 RING(ring, struct point, WIDTH * HEIGHT) snake;
+int dead;
 struct point apple;
 int points;
 
@@ -119,26 +120,6 @@ void draw_snake()
 {
 	struct point p;
 
-	p = RING_PEEK_HEAD(snake);
-	switch (RING_PEEK_HEAD(direction)) {
-		case UP:
-			set_cursor(p.x * 2, p.y);
-			printf("(v)");
-			break;
-		case DOWN:
-			set_cursor(p.x * 2 - 1, p.y);
-			printf("(w)");
-			break;
-		case RIGHT:
-			set_cursor(p.x * 2, p.y);
-			printf("(v");
-			break;
-		case LEFT:
-			set_cursor(p.x * 2, p.y);
-			printf("v)");
-			break;
-	}
-
 	for(int i = 1; i < RING_COUNT(snake); i++) {
 		p = RING_PEEK(i, snake);
 		set_cursor(p.x * 2, p.y);
@@ -146,6 +127,38 @@ void draw_snake()
 			printf("[]");
 		else
 			printf("{}");
+	}
+
+	p = RING_PEEK_HEAD(snake);
+	switch (RING_PEEK_HEAD(direction)) {
+		case UP:
+			set_cursor(p.x * 2, p.y);
+			if (dead)
+				printf("XX");
+			else
+				printf("(v)");
+			break;
+		case DOWN:
+			set_cursor(p.x * 2 - 1, p.y);
+			if (dead)
+				printf("XX");
+			else
+				printf("(w)");
+			break;
+		case RIGHT:
+			set_cursor(p.x * 2, p.y);
+			if (dead)
+				printf("(X");
+			else
+				printf("(v");
+			break;
+		case LEFT:
+			set_cursor(p.x * 2, p.y);
+			if (dead)
+				printf("X)");
+			else
+				printf("v)");
+			break;
 	}
 }
 
@@ -184,11 +197,21 @@ void draw_points()
 
 void move_apple()
 {
+	static struct point space[WIDTH * HEIGHT];
+	int sn;
+	struct point *s;
+
+	sn = RING_COUNT(snake);
+	s = malloc(sizeof(struct point) * sn);
+
+
 	/* TODO: should not be apple to move on top of snake
 	 * Rerolling on collision could get really bad..
 	 */
 	apple.x = rand() % WIDTH;
 	apple.y = rand() % HEIGHT;
+
+	free(s);
 }
 
 int ate()
@@ -223,7 +246,8 @@ int game()
 
 	points = 0;
 	clock = 0;
-	while(1) {
+	dead = 0;
+	while(!dead) {
 		clear_screen();
 		set_cursor(-tleft.x, HEIGHT + 4);
 		clock = (clock + 1) % speed;
@@ -236,7 +260,7 @@ int game()
 			move_snake();
 
 			if (die())
-				break;
+				dead = 1;
 		
 			if (ate()) {
 				points++;
@@ -271,6 +295,7 @@ void menu()
 int main()
 {
 	enum key k;
+
 	input_init();
 	// atexit(&input_finish);
 

@@ -396,3 +396,4 @@ enum key input_get()
 	pthread_mutex_unlock(&lock);
 	return k;
 }
+

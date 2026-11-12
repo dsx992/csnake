@@ -14,5 +14,8 @@ debug: snake.c rings.h input.o
 input.o: input.c
 	$(CC) $(flags) -g -o input.o -c input.c
 
+keys.o: keys.c
+	$(CC) $(flags) -o keys.o -c keys.c
+
 clean:
 	rm -rf input.o snake

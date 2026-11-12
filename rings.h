@@ -67,5 +67,8 @@
 		R.count--; 			\
 	}					\
 } while (0)
+#define WRITETO(BUF, R)				\
+	for (int i = 0; i < RING_COUNT(R); i++)	\
+		BUF[i] = RING_PEEK(i, R);	\
 
 #endif

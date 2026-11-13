@@ -33,3 +33,7 @@ critical thinking of such choices.
 - [ANSI escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code)
 - [macro data structure inspiration](https://man.openbsd.org/queue.3)
 
+# licence
+
+GNU PL with additional stipulation that repository will not be fed into a
+training model.

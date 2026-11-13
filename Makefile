@@ -1,21 +1,21 @@
 CC := gcc -std=c99
-flags := -Wall -Wpedantic
+flags := -Wall -Wpedantic -O2
 
 .PHONY: clean
 
 default: snake
 
-snake: snake.c rings.h input.o
-	$(CC) $(flags) -o snake snake.c input.o
+snake: snake.c rings.h input.o term.o
+	$(CC) $(flags) -o snake snake.c input.o term.o
 
 debug: snake.c rings.h input.o
-	$(CC) $(flags) -g -o snake_debug snake.c input.o
+	$(CC) $(flags) -o snake_debug snake.c input.o
 
-input.o: input.c
-	$(CC) $(flags) -g -o input.o -c input.c
+input.o: input.c input.h
+	$(CC) $(flags) -o input.o -c input.c
 
-keys.o: keys.c
-	$(CC) $(flags) -o keys.o -c keys.c
+term.o: term.c term.h
+	$(CC) $(flags) -o term.o -c term.c
 
 clean:
-	rm -rf input.o snake
+	rm -rf input.o term.o snake snake_debug

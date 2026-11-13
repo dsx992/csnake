@@ -1,4 +1,4 @@
 snake
 snake_debug
-input.o
+*.o
 tags

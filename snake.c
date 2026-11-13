@@ -5,23 +5,13 @@
 #include <time.h>
 #include <stdlib.h>
 #include "rings.h"
+#include "term.h"
 
-#ifndef MAX
-#define MAX(X, Y) X > Y ? X : Y
-#endif
+#define MAX(X, Y) (X) > (Y) ? (X) : (Y)
+#define MIN(X, Y) (X) < (Y) ? (X) : (Y)
 
 #define WIDTH 16
 #define HEIGHT 16
-
-char * keys[] = {
-	"KEY_NULL",
-	"KEY_UP",
-	"KEY_DOWN",
-	"KEY_LEFT",
-	"KEY_RIGHT",
-	"KEY_Q"
-};
-
 
 struct point{
 	int x, y;
@@ -49,20 +39,15 @@ enum direction {
 	RIGHT
 };
 
-char *dmap[] = {
-	"UP",
-	"DOWN",
-	"LEFT",
-	"RIGHT"
-};
-
 RING(, enum direction, 4) direction;
 
 const int speed = 7;
-RING(ring, struct point, WIDTH * HEIGHT) snake;
-int dead;
-struct point apple;
-int points;
+static RING(, struct point, WIDTH * HEIGHT) snake;
+/* keeps track of the snake so collisions is constant time */
+static char map[WIDTH][HEIGHT];
+static int dead;
+static struct point apple;
+static int points;
 
 struct point tleft = {.x = 2, .y = 4};
 
@@ -85,10 +70,12 @@ int die()
 	return 0;
 }
 
-void move_snake()
+int move_snake()
 {
-	struct point h = RING_PEEK_HEAD(snake);
+	struct point h, t, tt;
+
 	enum direction d = RING_PEEK_HEAD(direction);
+	h = RING_PEEK_HEAD(snake);
 
 	switch (d) {
 		case UP:
@@ -103,12 +90,32 @@ void move_snake()
 		case RIGHT:
 			h.x++;
 			break;
-	};
-	if (RING_COUNT(direction) > 1)
-		RING_REMOVE_HEAD(direction);
+	}
+
+	if (h.x >= WIDTH || h.x < 0
+			|| h.y >= HEIGHT || h.y < 0
+			|| (map[h.x][h.y]))
+		return 1;
+
+	t = RING_PEEK_TAIL(snake);
 
 	RING_REMOVE_TAIL(snake);
 	RING_PUSH_HEAD(h, snake);
+
+	/* next tail */
+	tt = RING_PEEK_TAIL(snake);
+
+	map[h.x][h.y] = 1;
+	map[t.x][t.y] = 0;
+	/* in case of `grow()`, the tail would have two elements, but this
+	 * would not be reflected in map without explicitly painting in the
+	 * duplicate tail. */
+	map[tt.x][tt.y] = 1;
+
+	if (RING_COUNT(direction) > 1)
+		RING_REMOVE_HEAD(direction);
+
+	return 1;
 }
 
 void set_cursor(int x, int y)
@@ -170,20 +177,20 @@ void draw_border()
 {
 	/* top bar */
 	set_cursor(-1, -1);
-	for (int i = 0; i < WIDTH + 2; i++)
+	for (int i = 0; i < WIDTH + 1; i++)
 		printf("##");
 
 	/* left and right columns */
-	for (int i = 0; i < HEIGHT + 1; i++) {
+	for (int i = 0; i < HEIGHT; i++) {
 		set_cursor(-1, i);
 		printf("#");
-		set_cursor(WIDTH * 2 + 2, i);
+		set_cursor(WIDTH * 2, i);
 		printf("#");
 	}
 
 	/* bottom bar */
-	set_cursor(-1, HEIGHT + 1);
-	for (int i = 0; i < WIDTH + 2; i++)
+	set_cursor(-1, HEIGHT);
+	for (int i = 0; i < WIDTH + 1; i++)
 		printf("##");
 }
 
@@ -201,21 +208,24 @@ void draw_points()
 
 void move_apple()
 {
-	static struct point space[WIDTH * HEIGHT];
-	int sn;
-	struct point *s;
-
-	sn = RING_COUNT(snake);
-	s = malloc(sizeof(struct point) * sn);
-
-
-	/* TODO: should not be apple to move on top of snake
-	 * Rerolling on collision could get really bad..
+	/* finds space not occupied by the snake in O(H * W) ~ O(n^2) time.
+	 * Maybe there is a more efficient approach?
 	 */
-	apple.x = rand() % WIDTH;
-	apple.y = rand() % HEIGHT;
+	int i, j, x, y;
 
-	free(s);
+	x = rand() % WIDTH;
+	y = rand() % HEIGHT;
+	for (i = 0; i < WIDTH; i++)
+		for (j = 0; j < HEIGHT; i++)
+			if (!map[(x + i) % WIDTH][(y + j) % HEIGHT])
+				goto done;
+
+done:
+
+
+
+	apple.x = (x + i) % WIDTH;
+	apple.y = (y + j) % HEIGHT;
 }
 
 int ate()
@@ -250,21 +260,18 @@ int game()
 
 	points = 0;
 	clock = 0;
-	dead = 0;
-	while(!dead) {
+	while(1) {
 		clear_screen();
 		set_cursor(-tleft.x, HEIGHT + 4);
 		clock = (clock + 1) % speed;
 
-		k = input_get();
+		k = input_get_key();
 		if (!handle_key(k))
 			return 0;
 
 		if (!clock) {
-			move_snake();
-
-			if (die())
-				dead = 1;
+			if (!move_snake())
+				break;
 		
 			if (ate()) {
 				points++;
@@ -286,22 +293,12 @@ int game()
 	return 1;
 }
 
-void menu()
-{
-	// static char* mitems[] = {
-	// 	"retry",
-	// 	"quit"
-	// };
-
-
-}
-
 int main()
 {
 	enum key k;
 
 	input_init();
-	// atexit(&input_finish);
+	term_init();
 
 	clear_screen();
 
@@ -309,8 +306,8 @@ int main()
 		if (!game())
 			goto done;
 		while (1) {
-			k = input_get();
-			if (k == KEY_Q)
+			k = input_get_key();
+			if (k == KEY_CHAR_Q)
 				goto done;
 			else if (k == KEY_ENTER)
 				break;
@@ -319,6 +316,7 @@ int main()
 	}
 done:
 	input_finish();
+	term_finish();
 	printf("score: %i\n", points);
 	return 0;
 }
@@ -326,26 +324,27 @@ done:
 int handle_key(enum key k)
 {
 	switch (k) {
-		case KEY_LEFT:
+		case KEY_ARROW_LEFT:
 			if (RING_PEEK_TAIL(direction) != RIGHT)
 				RING_PUSH_TAIL(LEFT, direction);
 			break;
-		case KEY_DOWN:
+		case KEY_ARROW_DOWN:
 			if (RING_PEEK_TAIL(direction) != UP)
 				RING_PUSH_TAIL(DOWN, direction);
 			break;
-		case KEY_UP:
+		case KEY_ARROW_UP:
 			if (RING_PEEK_TAIL(direction) != DOWN)
 				RING_PUSH_TAIL(UP, direction);
 			break;
-		case KEY_RIGHT:
+		case KEY_ARROW_RIGHT:
 			if (RING_PEEK_TAIL(direction) != LEFT)
 				RING_PUSH_TAIL(RIGHT, direction);
 			break;
 		case KEY_ENTER:
-		case KEY_NULL:
+		case KEY_INVALID:
+		case KEY_UNKNOWN:
 			break;
-		case KEY_Q:
+		case KEY_CHAR_Q:
 			return 0;
 	}
 	return 1;

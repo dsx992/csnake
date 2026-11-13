@@ -64,7 +64,7 @@ int dead;
 struct point apple;
 int points;
 
-struct point tleft = {.x = 10, .y = 10};
+struct point tleft = {.x = 2, .y = 4};
 
 int die()
 {
@@ -134,28 +134,32 @@ void draw_snake()
 		case UP:
 			set_cursor(p.x * 2, p.y);
 			if (dead)
-				printf("XX");
+				printf("xx");
 			else
 				printf("(v)");
 			break;
 		case DOWN:
-			set_cursor(p.x * 2 - 1, p.y);
-			if (dead)
-				printf("XX");
-			else
+			if (dead) {
+				set_cursor(p.x * 2, p.y);
+				printf("xx");
+
+			}
+			else {
+				set_cursor(p.x * 2 - 1, p.y);
 				printf("(w)");
+			}
 			break;
 		case RIGHT:
 			set_cursor(p.x * 2, p.y);
 			if (dead)
-				printf("(X");
+				printf("xx");
 			else
 				printf("(v");
 			break;
 		case LEFT:
 			set_cursor(p.x * 2, p.y);
 			if (dead)
-				printf("X)");
+				printf("xx");
 			else
 				printf("v)");
 			break;

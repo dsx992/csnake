@@ -1,9 +1,28 @@
 #include "term.h"
 #include <stdio.h>
-#include <termios.h>
 #include <unistd.h>
+#include <termios.h>
+#include <sys/ioctl.h>
+#include "point.h"
+#include <signal.h>
+
+volatile struct point termsz;
 
 static struct termios term;
+
+// When the window size changes, a SIGWINCH signal is sent to the foreground process group.
+static void term_get_size()
+{
+	static struct winsize ws;
+	ioctl(STDIN_FILENO, TIOCGWINSZ, &ws);
+	termsz.x = ws.ws_col;
+	termsz.y = ws.ws_row;
+}
+
+static void sigwinch_handler(int _)
+{
+	term_get_size();
+}
 
 int term_init()
 {
@@ -22,6 +41,9 @@ int term_init()
 	printf("\033[?1049h");
 	/* hides cursor. ?25h to show */
 	printf("\033[?25l");
+
+	term_get_size();
+	/* TODO: signal */
 
 	return 1;
 }

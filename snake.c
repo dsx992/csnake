@@ -8,6 +8,7 @@
 #include "term.h"
 #include <string.h>
 #include <ctype.h>
+#include "point.h"
 
 #define MAX(X, Y) (X) > (Y) ? (X) : (Y)
 #define MIN(X, Y) (X) < (Y) ? (X) : (Y)
@@ -16,14 +17,12 @@
 #define WIDTH 12
 #define HEIGHT 12
 
-struct point{
-	int x, y;
-};
-
 /* 20 fps -> 1 / 20 seconds -> (1 / 20) / 1'000'000'000 nanoseconds
  * -> 1'000'000'000 / 20 -> 100'000'000 / 2 */
 const long tickrate = 7;
 struct timespec r, s, t;
+
+extern struct point termsz;
 
 // const struct timespec rqtp = {
 // 	.tv_sec = 0,
@@ -106,9 +105,47 @@ int move_snake()
 #define SET_UNDERLINE "\033[4m"
 #define SET_NORMAL "\033[0m"
 
-void set_cursor(int x, int y)
+int set_cursor(int x, int y)
 {
-	printf("\033[%i;%iH", y + tleft.y, x + tleft.x);
+	int ok;
+
+	/* if cursor could not be set correctly */
+	if (x < 1 || y < 1 || x >= termsz.x || y >= termsz.y)
+		ok = 0;
+	else
+		ok = 1;
+
+	printf("\033[%i;%iH", y, x);
+
+	return ok;
+}
+
+/*
+ * sets the cursor relative to the game board.
+ * The board shall be centered in the terminal, therefore the top left corner
+ * is:
+ * 	x := (termsz.x / 2) - (WIDTH / 2)
+ * 	y := (termsz.y / 2) - (HEIGHT / 2)
+ * in the future maybe the scoreboard or other information will be next to the
+ * game board, so the logic may be required to shift the relative top left
+ * further.
+ *
+ * note: The board treats one unit as 1y and 2x.
+ *
+ * note: termsz is set in term.c. At some point it will be set on terminal size
+ * change, so there may be a race condition.
+ */
+int set_cursor_board(int x, int y)
+{
+	int tx, ty;
+	tx = (termsz.x / 2) - (WIDTH);
+	ty = (termsz.y / 2) - (HEIGHT / 2);
+
+	x = MAX(0, (MIN(tx + x, termsz.x)));
+	y = MAX(0, (MIN(ty + y, termsz.y)));
+
+	return set_cursor(x, y);
+
 }
 
 void draw_snake()
@@ -117,7 +154,7 @@ void draw_snake()
 
 	for(int i = 1; i < RING_COUNT(snake); i++) {
 		p = RING_PEEK(i, snake);
-		set_cursor(p.x * 2, p.y);
+		set_cursor_board(p.x * 2, p.y);
 		if (i % 2)
 			printf("[]");
 		else
@@ -127,7 +164,7 @@ void draw_snake()
 	p = RING_PEEK_HEAD(snake);
 	switch (RING_PEEK_HEAD(direction)) {
 		case UP:
-			set_cursor(p.x * 2, p.y);
+			set_cursor_board(p.x * 2, p.y);
 			if (alive)
 				printf("(v)");
 			else
@@ -135,23 +172,23 @@ void draw_snake()
 			break;
 		case DOWN:
 			if (alive) {
-				set_cursor(p.x * 2 - 1, p.y);
+				set_cursor_board(p.x * 2 - 1, p.y);
 				printf("(w)");
 			}
 			else {
-				set_cursor(p.x * 2, p.y);
+				set_cursor_board(p.x * 2, p.y);
 				printf("xx");
 			}
 			break;
 		case RIGHT:
-			set_cursor(p.x * 2, p.y);
+			set_cursor_board(p.x * 2, p.y);
 			if (alive)
 				printf("(v");
 			else
 				printf("xx");
 			break;
 		case LEFT:
-			set_cursor(p.x * 2, p.y);
+			set_cursor_board(p.x * 2, p.y);
 			if (alive)
 				printf("v)");
 			else
@@ -163,27 +200,27 @@ void draw_snake()
 void draw_border()
 {
 	/* top bar */
-	set_cursor(-1, -1);
+	set_cursor_board(-1, -1);
 	for (int i = 0; i < WIDTH + 1; i++)
 		printf("##");
 
 	/* left and right columns */
 	for (int i = 0; i < HEIGHT; i++) {
-		set_cursor(-1, i);
+		set_cursor_board(-1, i);
 		printf("#");
-		set_cursor(WIDTH * 2, i);
+		set_cursor_board(WIDTH * 2, i);
 		printf("#");
 	}
 
 	/* bottom bar */
-	set_cursor(-1, HEIGHT);
+	set_cursor_board(-1, HEIGHT);
 	for (int i = 0; i < WIDTH + 1; i++)
 		printf("##");
 }
 
 void draw_apple()
 {
-	set_cursor(apple.x * 2, apple.y);
+	set_cursor_board(apple.x * 2, apple.y);
 	printf("@^");
 }
 
@@ -192,8 +229,13 @@ void draw_score()
 	if (RING_COUNT(snake) == 0)
 		return;
 
-	set_cursor(WIDTH - 4, -2);
+	set_cursor_board(WIDTH - 4, -2);
 	printf("score: %i", score);
+}
+
+void draw_leaderboard()
+{
+
 }
 
 void move_apple()
@@ -257,7 +299,6 @@ int game()
 		clock_gettime(CLOCK_REALTIME, &s);
 
 		clear_screen();
-		set_cursor(-tleft.x, HEIGHT + 4);
 
 		k = input_get_key();
 		if (!handle_key(k))
@@ -306,7 +347,7 @@ int menu()
 		draw_score();
 
 		for (int i = 0; i < LENGTH(items); i++) {
-			set_cursor(WIDTH - strlen(items[i] + 1),
+			set_cursor_board(WIDTH - strlen(items[i] + 1),
 					(HEIGHT / 2) - 2 * (LENGTH(items)) + 2 * i);
 			if (i == m)
 				printf(SET_UNDERLINE "%s" SET_NORMAL, items[i]);
@@ -354,10 +395,7 @@ static size_t getline(char *buf, size_t n, FILE *s)
 			i++;
 			break;
 		}
-
-		printf("%c\n", buf[i]);
 	}
-	printf("%lu\n", i);
 	return i;
 }
 
@@ -367,7 +405,7 @@ static size_t getline(char *buf, size_t n, FILE *s)
  * 	name	10	unix epoch
  * 	is sorted by score
  */
-int add_score(const char *name)
+int commit_score(const char *name)
 {
 	static char buf[128];
 	static char new[128];
@@ -380,7 +418,10 @@ int add_score(const char *name)
 	leader = fopen(LEADERBOARD, "r");
 
 	t = time(NULL);
-	nn = snprintf(new, sizeof(new), "%s\t%i\t%lu\n", name, score, t);
+	nn = name[0] == 0
+		? snprintf(new, sizeof(new), "%s\t%i\t%lu\n", "<empty>", score, t)
+		: snprintf(new, sizeof(new), "%s\t%i\t%lu\n", name, score, t);
+
 
 	if (!tmp)
 		goto done;
@@ -403,6 +444,9 @@ int add_score(const char *name)
 		}
 
 		fwrite(new, nn, sizeof(char), tmp);
+		/* may be a missing score from previous break. */
+		if (bn)
+			fwrite(buf, bn, sizeof(char), tmp);
 
 		while ((bn = getline(buf, sizeof(buf), leader))) {
 			m = sscanf(buf, "%*s\t%i", &s);
@@ -463,9 +507,10 @@ void postgame()
 		clear_screen();
 		draw_border();
 		draw_score();
+		draw_snake();
 
 		name[i] = 0;
-		set_cursor(WIDTH / 2 - (int)sizeof(name) , HEIGHT / 2);
+		set_cursor_board(WIDTH / 2 - (int)sizeof(name) , HEIGHT / 2);
 		printf("name: %s", name);
 
 		/* TODO: backspace */
@@ -481,7 +526,7 @@ void postgame()
 	}
 	input_init();
 
-	add_score(name);
+	commit_score(name);
 
 }
 

@@ -5,7 +5,7 @@ flags := -Wall -Wpedantic -g
 
 default: snake
 
-snake: snake.c rings.h input.o term.o
+snake: snake.c rings.h point.h input.o term.o
 	$(CC) $(flags) -o snake snake.c input.o term.o
 
 debug: snake.c rings.h input.o
@@ -14,7 +14,7 @@ debug: snake.c rings.h input.o
 input.o: input.c input.h
 	$(CC) $(flags) -o input.o -c input.c
 
-term.o: term.c term.h
+term.o: term.c term.h point.h
 	$(CC) $(flags) -o term.o -c term.c
 
 clean:

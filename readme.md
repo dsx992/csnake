@@ -9,6 +9,10 @@ A c99 TUI game for unix terminals. Currently assume ANSI escape sequences and
 
 # Structure
 
+## drawing
+
+drawing is done by moving the cursor with ANSI escape sequences.
+
 ## input
 
 Input is continuously written to a ring by a thread that calls `getchar()`. A

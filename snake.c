@@ -6,12 +6,15 @@
 #include <stdlib.h>
 #include "rings.h"
 #include "term.h"
+#include <string.h>
+#include <ctype.h>
 
 #define MAX(X, Y) (X) > (Y) ? (X) : (Y)
 #define MIN(X, Y) (X) < (Y) ? (X) : (Y)
 
-#define WIDTH 16
-#define HEIGHT 16
+#define LEADERBOARD "leaderboard"
+#define WIDTH 12
+#define HEIGHT 12
 
 struct point{
 	int x, y;
@@ -19,11 +22,13 @@ struct point{
 
 /* 20 fps -> 1 / 20 seconds -> (1 / 20) / 1'000'000'000 nanoseconds
  * -> 1'000'000'000 / 20 -> 100'000'000 / 2 */
-const long tickrate = 100000000 / 6;
-const struct timespec rqtp = {
-	.tv_sec = 0,
-	.tv_nsec = tickrate,
-};
+const long tickrate = 7;
+struct timespec r, s, t;
+
+// const struct timespec rqtp = {
+// 	.tv_sec = 0,
+// 	.tv_nsec = 1000000000 / tickrate,
+// };
 
 void clear_screen()
 {
@@ -39,36 +44,16 @@ enum direction {
 	RIGHT
 };
 
-RING(, enum direction, 4) direction;
+RING(, enum direction, 2) direction;
 
-const int speed = 7;
 static RING(, struct point, WIDTH * HEIGHT) snake;
 /* keeps track of the snake so collisions is constant time */
 static char map[WIDTH][HEIGHT];
-static int dead;
+static int alive;
 static struct point apple;
-static int points;
+static int score;
 
-struct point tleft = {.x = 2, .y = 4};
-
-int die()
-{
-	struct point h, p;
-
-	h = RING_PEEK_HEAD(snake);
-
-	if (h.x > WIDTH || h.x < 0
-			|| h.y > HEIGHT || h.y < 0)
-		return 1;
-
-	for (int i = 1; i < RING_COUNT(snake); i++) {
-		p = RING_PEEK(i, snake);
-		if (h.x == p.x && h.y == p.y)
-			return 1;
-	}
-
-	return 0;
-}
+struct point tleft = {.x = 4, .y = 4};
 
 int move_snake()
 {
@@ -95,7 +80,7 @@ int move_snake()
 	if (h.x >= WIDTH || h.x < 0
 			|| h.y >= HEIGHT || h.y < 0
 			|| (map[h.x][h.y]))
-		return 1;
+		return 0;
 
 	t = RING_PEEK_TAIL(snake);
 
@@ -117,6 +102,9 @@ int move_snake()
 
 	return 1;
 }
+
+#define SET_UNDERLINE "\033[4m"
+#define SET_NORMAL "\033[0m"
 
 void set_cursor(int x, int y)
 {
@@ -140,35 +128,34 @@ void draw_snake()
 	switch (RING_PEEK_HEAD(direction)) {
 		case UP:
 			set_cursor(p.x * 2, p.y);
-			if (dead)
-				printf("xx");
-			else
+			if (alive)
 				printf("(v)");
+			else
+				printf("xx");
 			break;
 		case DOWN:
-			if (dead) {
-				set_cursor(p.x * 2, p.y);
-				printf("xx");
-
-			}
-			else {
+			if (alive) {
 				set_cursor(p.x * 2 - 1, p.y);
 				printf("(w)");
+			}
+			else {
+				set_cursor(p.x * 2, p.y);
+				printf("xx");
 			}
 			break;
 		case RIGHT:
 			set_cursor(p.x * 2, p.y);
-			if (dead)
-				printf("xx");
-			else
+			if (alive)
 				printf("(v");
+			else
+				printf("xx");
 			break;
 		case LEFT:
 			set_cursor(p.x * 2, p.y);
-			if (dead)
-				printf("xx");
-			else
+			if (alive)
 				printf("v)");
+			else
+				printf("xx");
 			break;
 	}
 }
@@ -200,10 +187,13 @@ void draw_apple()
 	printf("@^");
 }
 
-void draw_points()
+void draw_score()
 {
+	if (RING_COUNT(snake) == 0)
+		return;
+
 	set_cursor(WIDTH - 4, -2);
-	printf("points: %i", points);
+	printf("score: %i", score);
 }
 
 void move_apple()
@@ -243,13 +233,16 @@ void grow()
 int game()
 {
 	enum key k;
-	int clock;
 
 	while (RING_COUNT(snake))
 		RING_REMOVE_TAIL(snake);
 
 	while (RING_COUNT(direction))
 		RING_REMOVE_HEAD(direction);
+
+	for (int i = 0; i < WIDTH; i++)
+		for (int j = 0; j < HEIGHT; j++)
+			map[i][j] = 0;
 
 	RING_PUSH_TAIL(((struct point){WIDTH / 2, HEIGHT / 2}), snake);
 	RING_PUSH_TAIL(((struct point){WIDTH / 2 - 1, HEIGHT / 2}), snake);
@@ -258,66 +251,257 @@ int game()
 	
 	apple = (struct point){.x = WIDTH / 2 + 4, .y = HEIGHT / 2};
 
-	points = 0;
-	clock = 0;
-	while(1) {
+	score = 0;
+	alive = 1;
+	while(alive) {
+		clock_gettime(CLOCK_REALTIME, &s);
+
 		clear_screen();
 		set_cursor(-tleft.x, HEIGHT + 4);
-		clock = (clock + 1) % speed;
 
 		k = input_get_key();
 		if (!handle_key(k))
 			return 0;
 
-		if (!clock) {
-			if (!move_snake())
-				break;
-		
-			if (ate()) {
-				points++;
-				grow();
-				move_apple();
-			}
-
+		if (!move_snake())
+			alive = 0;
+	
+		if (ate()) {
+			score++;
+			grow();
+			move_apple();
 		}
 		draw_border();
 		draw_snake();
 		draw_apple();
-		draw_points();
+		draw_score();
 		set_cursor(0, HEIGHT + 2);
 		fflush(stdout);
 
-		nanosleep(&rqtp, NULL);
+		clock_gettime(CLOCK_REALTIME, &t);
+		t.tv_sec = 0;
+		t.tv_nsec = (1000000000 / tickrate) - (t.tv_nsec - s.tv_nsec);
+		nanosleep(&t, NULL);
 	}
 
 	return 1;
 }
 
+/* returns 1 if play, 0 if quit */
+int menu()
+{
+	int m = 0;
+	int e = 0;
+	static const char *items[] = {
+		"play",
+		"quit",
+	};
+
+	t.tv_sec = 0;
+	t.tv_nsec = (1000000000 / (tickrate * 4));
+
+	while (!e) {
+		clear_screen();
+		draw_border();
+		draw_score();
+
+		for (int i = 0; i < LENGTH(items); i++) {
+			set_cursor(WIDTH - strlen(items[i] + 1),
+					(HEIGHT / 2) - 2 * (LENGTH(items)) + 2 * i);
+			if (i == m)
+				printf(SET_UNDERLINE "%s" SET_NORMAL, items[i]);
+			else
+				printf("%s", items[i]);
+		}
+
+		switch (input_get_key()) {
+			case KEY_ARROW_UP:
+				m = MAX(0, m - 1);
+				break;
+			case KEY_ARROW_DOWN:
+				m = MIN(m + 1, LENGTH(items) - 1);
+				break;
+			case KEY_CHAR_Q:
+				return 0;
+			case KEY_ENTER:
+				e = 1;
+			default:
+				break;
+		}
+
+		fflush(stdout);
+		nanosleep(&t, NULL);
+	}
+
+	switch (m) {
+		case 0:
+			return 1;
+		case 1:
+			return 0;
+	}
+
+	return 0;
+}
+
+static size_t getline(char *buf, size_t n, FILE *s)
+{
+	size_t i;
+	for(i = 0; i < n; i++) {
+		if (!fread(buf + i, sizeof(char), 1, s)) {
+			break;
+		}
+		if (buf[i] == '\n') {
+			i++;
+			break;
+		}
+
+		printf("%c\n", buf[i]);
+	}
+	printf("%lu\n", i);
+	return i;
+}
+
+/* leaderboard format:
+ * 	name	50	unix epoch
+ * 	name	30	unix epoch
+ * 	name	10	unix epoch
+ * 	is sorted by score
+ */
+int add_score(const char *name)
+{
+	static char buf[128];
+	static char new[128];
+	int m, bn, nn, s, ok;
+	time_t t;
+	FILE *leader, *tmp;
+
+	ok = 0;
+	tmp = fopen("." LEADERBOARD, "w");
+	leader = fopen(LEADERBOARD, "r");
+
+	t = time(NULL);
+	nn = snprintf(new, sizeof(new), "%s\t%i\t%lu\n", name, score, t);
+
+	if (!tmp)
+		goto done;
+
+	/* copies and inserts into tmp (sorted) */
+	if (leader) {
+		while ((bn = getline(buf, sizeof(buf), leader))) {
+			m = sscanf(buf, "%*s\t%i", &s);
+
+			/* assert only one match */
+			if (m != 1) {
+				ok = 0;
+				goto done;
+			}
+
+			if (s < score)
+				break;
+			
+			fwrite(buf, bn, sizeof(char), tmp);
+		}
+
+		fwrite(new, nn, sizeof(char), tmp);
+
+		while ((bn = getline(buf, sizeof(buf), leader))) {
+			m = sscanf(buf, "%*s\t%i", &s);
+
+			/* assert only one match */
+			if (m != 1) {
+				ok = 0;
+				goto done;
+			}
+
+			fwrite(buf, bn, sizeof(char), tmp);
+		}
+		fclose(leader);
+	} else {
+		/* if leaderboard does not exist, just write the current
+		 * score. */
+		fwrite(new, nn, sizeof(char), tmp);
+	}
+
+	fclose(tmp);
+	
+	tmp = fopen("." LEADERBOARD, "r");
+	leader = fopen(LEADERBOARD, "w");
+
+	if (tmp && leader) {
+		while ((nn = getline(buf, sizeof(buf), tmp)))
+			fwrite(buf, nn, sizeof(char), leader);
+		ok = 1;
+	}
+
+done:
+	if (tmp)
+		fclose(tmp);
+	if (leader)
+		fclose(leader);
+
+	remove("." LEADERBOARD);
+
+	return ok;
+}
+
+void postgame()
+{
+	int e, i;
+	char c;
+	static char name[8];
+
+
+	/* TODO: maybe not the prettiest. Maybe need some more robust
+	 * modal mode? E.g.: input_set_text() and input_set_key()?
+	 * `readline` maybe?
+	 */
+	input_finish();
+
+	e = 0;
+	i = 0;
+	while (!e) {
+		clear_screen();
+		draw_border();
+		draw_score();
+
+		name[i] = 0;
+		set_cursor(WIDTH / 2 - (int)sizeof(name) , HEIGHT / 2);
+		printf("name: %s", name);
+
+		/* TODO: backspace */
+		c = getchar();
+
+		/* still want the drawing, so no break */
+		if (c == '\n')
+			e = 1;
+		else if (isalnum(c) && i < sizeof(name) - 1)
+			name[i++] = c;
+
+		fflush(stdout);
+	}
+	input_init();
+
+	add_score(name);
+
+}
+
 int main()
 {
-	enum key k;
-
 	input_init();
 	term_init();
 
 	clear_screen();
 
 	while (1) {
-		if (!game())
-			goto done;
-		while (1) {
-			k = input_get_key();
-			if (k == KEY_CHAR_Q)
-				goto done;
-			else if (k == KEY_ENTER)
-				break;
-			nanosleep(&rqtp, NULL);
-		}
+		if (!menu())
+			break;
+		game();
+		postgame();
 	}
-done:
+
 	input_finish();
 	term_finish();
-	printf("score: %i\n", points);
+	printf("score: %i\n", score);
 	return 0;
 }
 

@@ -1,5 +1,5 @@
 CC := gcc -std=c99
-flags := -Wall -Wpedantic -O2
+flags := -Wall -Wpedantic -g
 
 .PHONY: clean
 

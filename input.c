@@ -1,12 +1,11 @@
 #include "input.h"
 #include <pthread.h>
-#include <termios.h>
 #include <stdio.h>
 #include <unistd.h>
 #include "rings.h"
-#include "rings.h"
 #include <limits.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static RING(, char, 2 << 8) ring;
@@ -14,7 +13,6 @@ static RING(, char, 2 << 8) ring;
 pthread_t tid;
 
 static void *listener(void *args);
-static void push(char c);
 enum key key_parse();
 
 int input_init()
@@ -39,14 +37,32 @@ enum key input_get_key()
 	return k;
 }
 
-
-static void push(char c)
+int input_getalnum(char *buf, size_t i)
 {
+	int r;
+	char c;
+
 	pthread_mutex_lock(&lock);
 
-	RING_PUSH_TAIL(c, ring);
+	if (RING_COUNT(ring) == 0) {
+		r = -1;
+		c = 0;
+	} else {
+		c = RING_PEEK_HEAD(ring);
+		RING_REMOVE_HEAD(ring);
+	}
 
 	pthread_mutex_unlock(&lock);
+
+	if (c) {
+		if ((r = isalnum(c)))
+			buf[i] = c;
+
+		if (c == '\n')
+			 r = 0;
+	}
+
+	return r;
 }
 
 static void *listener(void *args)
@@ -54,7 +70,14 @@ static void *listener(void *args)
 	char c;
 	while(1) {
 		c = getchar();
-		push(c);
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+		pthread_mutex_lock(&lock);
+
+		RING_PUSH_TAIL(c, ring);
+
+		pthread_mutex_unlock(&lock);
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+
 	}
 
 	return NULL;

@@ -1,6 +1,8 @@
 #ifndef INPUT_
 #define INPUT_
 
+#include <stddef.h>
+
 /*
  * the `input` set of functions read characters from stdin into an internal
  * buffer. User can request the next key press in terms of the `enum key`.
@@ -38,6 +40,8 @@ const static struct {
 
 /* returns (char)NULL if there is no input */
 enum key input_get_key();
+/* Writes the next alphanumerical char to buf. returns 0 if not alnum. */
+int input_getalnum(char *buf, size_t i);
 /* sets up terminal and key listener thread */
 int input_init();
 /* cleans up */

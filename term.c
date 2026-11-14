@@ -6,7 +6,7 @@
 #include "point.h"
 #include <signal.h>
 
-volatile struct point termsz;
+volatile struct term_ctx term_ctx;
 
 static struct termios term;
 
@@ -15,13 +15,8 @@ static void term_get_size()
 {
 	static struct winsize ws;
 	ioctl(STDIN_FILENO, TIOCGWINSZ, &ws);
-	termsz.x = ws.ws_col;
-	termsz.y = ws.ws_row;
-}
-
-static void sigwinch_handler(int _)
-{
-	term_get_size();
+	term_ctx.w = ws.ws_col;
+	term_ctx.h = ws.ws_row;
 }
 
 int term_init()

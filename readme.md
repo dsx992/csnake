@@ -9,6 +9,19 @@ A c99 TUI game for unix terminals. Currently assume ANSI escape sequences and
 
 # Structure
 
+## files
+
+note: WIP
+
+- snake.c: main loop
+- game.c: game loop
+- score.c: keep track of score and leaderboard
+- menus.c: 
+- input.c: handling input and key parsing
+- rings.h: ring data structure
+- term.c: handles setup of terminal
+- draw.c: drawing global elements, e.g., snake, border.
+
 ## drawing
 
 drawing is done by moving the cursor with ANSI escape sequences.

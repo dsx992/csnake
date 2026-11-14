@@ -17,6 +17,9 @@
  * 	everything is assumed to be initialized to 0.
  * 	The ring is overwriting. This means that pushing to a full ring moves
  * 	the head.
+ *
+ * TODO: the TYPE data[SIZE] construct is not flexible enough, e.g., not
+ * compile-time game dimensions.
  */
 #define RING(NAME, TYPE, SIZE)		\
 	struct NAME {			\

@@ -21,7 +21,7 @@ static int eat();
 static void move_apple();
 static int move_snake();
 static int handle_key(enum key);
-static void reset_ctx();
+static void reset_game_ctx();
 
 static struct timespec s, t;
 
@@ -29,7 +29,7 @@ int game()
 {
 	enum key k;
 
-	reset_ctx();
+	reset_game_ctx();
 
 	while(game_ctx.alive && !game_ctx.quit) {
 		clock_gettime(CLOCK_REALTIME, &s);
@@ -175,7 +175,7 @@ static int handle_key(enum key k)
 	return 1;
 }
 
-static void reset_ctx()
+static void reset_game_ctx()
 {
 	while (RING_COUNT(game_ctx.snake))
 		RING_REMOVE_TAIL(game_ctx.snake);

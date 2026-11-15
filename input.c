@@ -15,6 +15,14 @@ pthread_t tid;
 static void *listener(void *args);
 enum key key_parse();
 
+/* should not be used when input_init */
+int input_getchar()
+{
+	char c = getchar();
+	RING_PUSH_TAIL(c, ring);
+	return 1;
+}
+
 int input_init()
 {
 	return !pthread_create(&tid, NULL, &listener, NULL);
@@ -92,7 +100,7 @@ enum key key_parse()
 
 	for (m = 0; m < LENGTH(keymap); m++) {
 		for (i = 0; (p = keymap[m].pattern[i]); i++) {
-			if (RING_COUNT(ring) == 0)
+			if (RING_COUNT(ring) - i == 0)
 				return KEY_INVALID;
 
 			c = RING_PEEK(i, ring);

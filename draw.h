@@ -19,6 +19,6 @@ void draw_snake();
 void draw_border();
 void draw_apple();
 void draw_score();
-void draw_leaderboard();
+void draw_leaderboard(struct point tl, struct point br, int l);
 
 #endif

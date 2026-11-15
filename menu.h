@@ -11,6 +11,6 @@ enum menuitem {
 
 enum menuitem menu();
 void postgame();
-void scoreboard();
+void leaderboard();
 
 #endif

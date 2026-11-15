@@ -3,6 +3,7 @@
 #include "game.h"
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 
 /* leaderboard file */
 #define LEADERBOARD "leaderboard"
@@ -10,7 +11,44 @@
 struct game_ctx;
 extern struct game_ctx game_ctx;
 
+FILE *leaderboard_open()
+{
+	return fopen(LEADERBOARD, "r");
+}
+
 static size_t getline(char *buf, size_t n, FILE *s);
+static int write_entry(FILE *, const struct leaderboard_entry *);
+
+int leaderboard_entry(FILE *s, struct leaderboard_entry *entry)
+{
+	char buf[128];
+	int m;
+
+	getline(buf, sizeof(buf), s);
+	m = sscanf(buf, "%s\t%i\t%lu", entry->name, &entry->score, &entry->unix);
+	
+	return m == 3;
+}
+
+static const struct leaderboard_entry default_leaderboard[] = {
+	{.name = "alice", .score = 50},
+	{.name = "bob", .score = 30},
+	{.name = "charlie", .score = 5},
+};
+
+int leaderboard_default()
+{
+	FILE *leader = fopen(LEADERBOARD, "w");
+
+	if (!leader)
+		return 0;
+
+	for (int i = 0; i < LENGTH(default_leaderboard); i++)
+		write_entry(leader, &default_leaderboard[i]);
+	fclose(leader);
+
+	return 1;
+}
 
 /* leaderboard format:
  * 	name	50	unix epoch
@@ -20,77 +58,51 @@ static size_t getline(char *buf, size_t n, FILE *s);
  */
 int leaderboard_commit(const char *name)
 {
-	static char buf[128];
-	static char new[128];
-	int m, bn, nn, s, ok;
+	int ok, inserted;
 	time_t t;
 	FILE *leader, *tmp;
+	struct leaderboard_entry le, ge;
 
 	ok = 0;
+	inserted = 0;
 	tmp = fopen("." LEADERBOARD, "w");
 	leader = fopen(LEADERBOARD, "r");
-
 	t = time(NULL);
-	nn = (name[0] == 0)
-		? snprintf(new, sizeof(new),
-				"%s\t%i\t%lu\n", "<empty>", game_ctx.score, t)
-		: snprintf(new, sizeof(new),
-				"%s\t%i\t%lu\n", name, game_ctx.score, t);
+	
+	if (!name)
+		goto done;
 
 	if (!tmp)
 		goto done;
 
-	/* copies and inserts into tmp (sorted) */
-	if (leader) {
-		while ((bn = getline(buf, sizeof(buf), leader))) {
-			m = sscanf(buf, "%*s\t%i", &s);
-
-			/* assert only one match */
-			if (m != 1) {
-				ok = 0;
-				goto done;
-			}
-
-			if (s < game_ctx.score)
-				break;
-			
-			fwrite(buf, bn, sizeof(char), tmp);
-		}
-
-		fwrite(new, nn, sizeof(char), tmp);
-
-		/* may be a missing score from previous break. */
-		if (bn)
-			fwrite(buf, bn, sizeof(char), tmp);
-
-		while ((bn = getline(buf, sizeof(buf), leader))) {
-			m = sscanf(buf, "%*s\t%i", &s);
-
-			/* assert only one match */
-			if (m != 1) {
-				ok = 0;
-				goto done;
-			}
-
-			fwrite(buf, bn, sizeof(char), tmp);
-		}
-		fclose(leader);
-	} else {
-		/* if leaderboard does not exist, just write the current
-		 * score. */
-		fwrite(new, nn, sizeof(char), tmp);
+	if (!leader) {
+		leaderboard_default();
 	}
 
+	strncpy(ge.name, name, NAME_LEN);
+	ge.score = game_ctx.score;
+	ge.unix = t;
+
+	/* insert all entries into tmp */
+	while (leaderboard_entry(leader, &le)) {
+		if (!inserted && le.score < game_ctx.score)
+			inserted = write_entry(tmp, &ge);
+		
+		write_entry(tmp, &le);
+	}
+
+	fclose(leader);
 	fclose(tmp);
 	
 	tmp = fopen("." LEADERBOARD, "r");
 	leader = fopen(LEADERBOARD, "w");
 
-	if (tmp && leader) {
-		while ((nn = getline(buf, sizeof(buf), tmp)))
-			fwrite(buf, nn, sizeof(char), leader);
-		ok = 1;
-	}
+	if (!(tmp && leader))
+		goto done;
+
+	/* unneeded parsing but easier to read? */
+	while (leaderboard_entry(tmp, &le))
+		write_entry(leader, &le);
 done:
 	if (tmp)
 		fclose(tmp);
@@ -104,16 +116,29 @@ done:
 
 static size_t getline(char *buf, size_t n, FILE *s)
 {
+	char c;
 	size_t i;
-	for(i = 0; i < n; i++) {
-		if (!fread(buf + i, sizeof(char), 1, s)) {
+
+
+	for(i = 0; i < n - 1; i++) {
+		c = fgetc(s);
+		if (c == EOF || c == '\n')
 			break;
-		}
-		if (buf[i] == '\n') {
-			i++;
-			break;
-		}
+		buf[i] = c;
 	}
+
 	buf[i] = 0;
+	
 	return i;
+}
+
+static int write_entry(FILE *fd, const struct leaderboard_entry *entry) {
+	if (!fd || !entry)
+		return 0;
+
+	fprintf(fd, "%s\t%i\t%lu\n",
+			entry->name[0] ? entry->name : "<empty>",
+			entry->score,
+			entry->unix);
+	return 1;
 }

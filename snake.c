@@ -12,17 +12,20 @@ int main()
 {
 	int quit = 0;
 
-	input_init();
 	term_init();
+	input_init();
 
-	while (!game_ctx.quit && !quit) {
+	while (!quit) {
 		switch (menu()) {
 			case MENUITEM_PLAY:
 				game();
+				/* go to menu */
+				if (game_ctx.quit)
+					break;
 				postgame();
 				break;
 			case MENUITEM_SCORE:
-				scoreboard();
+				leaderboard();
 				break;
 			case MENUITEM_QUIT:
 			case MENUITEM_END:
@@ -30,8 +33,8 @@ int main()
 		}
 	}
 
-	input_finish();
 	term_finish();
+	input_finish();
 
 	printf("score: %i\n", game_ctx.score);
 

@@ -10,17 +10,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define NAME_LEN 8
-
-#define MAX(X, Y) (X) > (Y) ? (X) : (Y)
-#define MIN(X, Y) (X) < (Y) ? (X) : (Y)
+#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 
 struct game_ctx;
 extern struct game_ctx game_ctx;
 
 static const char *items[MENUITEM_END] = {
 	[MENUITEM_PLAY] = "play",
-	[MENUITEM_SCORE] = "scoreboard",
+	[MENUITEM_SCORE] = "leaderboard",
 	[MENUITEM_QUIT] = "quit",
 };
 
@@ -29,19 +27,25 @@ static struct timespec t;
 /* returns 1 if play, 0 if quit */
 enum menuitem menu()
 {
-	enum menuitem m = MENUITEM_PLAY;
+	static enum menuitem m, n;
 	int e = 0;
 
 	t.tv_sec = 0;
 	t.tv_nsec = 1000000000 / 60;
 
-	while (!e) {
-		draw_clear();
-		draw_border();
-		draw_score();
+	if (!n)
+		for (enum menuitem i = MENUITEM_PLAY; i < MENUITEM_END; i++)
+			n = MAX(n, sizeof(items[i]));
 
+	input_finish();
+
+	draw_clear();
+	draw_border();
+	draw_score();
+
+	while (!e) {
 		for (enum menuitem i = 0; i < MENUITEM_END; i++) {
-			set_cursor_board(WIDTH - strlen(items[i] + 1),
+			set_cursor_board(WIDTH - (n / 2),
 					(HEIGHT / (2 * MENUITEM_END)) + 2 * i);
 			if (i == m)
 				printf(SET_UNDERLINE "%s" SET_NORMAL, items[i]);
@@ -51,7 +55,7 @@ enum menuitem menu()
 
 		switch (input_get_key()) {
 			case KEY_ARROW_UP:
-				m = MAX(0, m - 1);
+				m = m ? m - 1 : m;
 				break;
 			case KEY_ARROW_DOWN:
 				m = MIN(m + 1, MENUITEM_END - 1);
@@ -62,22 +66,24 @@ enum menuitem menu()
 				break;
 			case KEY_ENTER:
 				e = 1;
-			default:
 				break;
+			default:
+				input_getchar();
 		}
 
 		draw_flush();
-		nanosleep(&t, NULL);
 	}
+
+	input_init();
 
 	return m;
 }
 
 void postgame()
 {
-	int e, i;
+	int i, commit;
 	char c;
-	static char name[NAME_LEN];
+	char name[NAME_LEN];
 
 	/* TODO: maybe not the prettiest. Maybe need some more robust
 	 * modal mode? E.g.: input_set_text() and input_set_key()?
@@ -85,35 +91,60 @@ void postgame()
 	 */
 	input_finish();
 
-	e = 0;
+	commit = 0;
 	i = 0;
-	while (!e) {
-		draw_clear();
-		draw_border();
-		draw_score();
-		draw_snake();
+	while (i < sizeof(name) - 1) {
+		set_cursor_board(2, HEIGHT / 2);
 
 		name[i] = 0;
-		set_cursor_board(WIDTH / 2 - (int)sizeof(name) , HEIGHT / 2);
-		printf("name: %s", name);
+		printf("name: "
+			SET_UNDERLINE "%-*s" SET_NORMAL
+			, NAME_LEN, name);
 
-		/* TODO: backspace */
 		c = getchar();
 
 		/* still want the drawing, so no break */
-		if (c == '\n')
-			e = 1;
-		else if (isalnum(c) && i < sizeof(name) - 1)
+		if (c == '\n') {
+			commit = 1;
+			break;
+		} else if (c == '\033') {
+			break;
+		} else if (c == 0x7f) {
+			/* delete */
+			i--;
+		} else if (isalnum(c)) {
 			name[i++] = c;
+		}
 
 		draw_flush();
 	}
+
 	input_init();
 
-	leaderboard_commit(name);
+	if (commit)
+		leaderboard_commit(name);
 }
 
-void scoreboard()
+void leaderboard()
 {
-}
+	FILE *leader;
+	struct point tl = {4, 2};
+	struct point br = {WIDTH * 2 - 1, HEIGHT - 1};
 
+	leader = leaderboard_open();
+	if (!leader)
+		leaderboard_default();
+	else
+		fclose(leader);
+
+	input_finish();
+	
+	draw_clear();
+	draw_border();
+	draw_leaderboard(tl, br, -1);
+	draw_flush();
+
+	getchar();
+
+	input_init();
+}

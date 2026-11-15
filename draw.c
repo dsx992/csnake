@@ -2,9 +2,10 @@
 #include "draw.h"
 #include "game.h"
 #include "term.h"
+#include "leaderboard.h"
 
-#define MAX(X, Y) (X) > (Y) ? (X) : (Y)
-#define MIN(X, Y) (X) < (Y) ? (X) : (Y)
+#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 
 struct game_ctx;
 struct term_ctx;
@@ -42,7 +43,7 @@ int set_cursor(int x, int y)
  * is:
  * 	x := (termsz.x / 2) - (WIDTH / 2)
  * 	y := (termsz.y / 2) - (HEIGHT / 2)
- * in the future maybe the scoreboard or other information will be next to the
+ * in the future maybe the leaderboard or other information will be next to the
  * game board, so the logic may be required to shift the relative top left
  * further.
  *
@@ -63,53 +64,69 @@ int set_cursor_board(int x, int y)
 	return set_cursor(x, y);
 }
 
+enum snake_parts {
+	SNAKE_HEAD,
+	SNAKE_BODY_1,
+	SNAKE_BODY_2,
+};
+
+enum snake_state {
+	SNAKE_ALIVE,
+	SNAKE_DEAD,
+};
+
+const static char *snake_sprite[SNAKE_BODY_2 + 1][RIGHT + 1][SNAKE_DEAD + 1] = {
+	[SNAKE_HEAD] = {
+		[UP] = {
+			[SNAKE_ALIVE] = ":U",
+			[SNAKE_DEAD] = "xp"
+		},
+		[DOWN] = {
+			[SNAKE_ALIVE] = "n:",
+			[SNAKE_DEAD] = "dx"
+		},
+		[LEFT] = {
+			[SNAKE_ALIVE] = ")\"",
+			[SNAKE_DEAD] = "dx"
+		},
+		[RIGHT] = {
+			[SNAKE_ALIVE] = "\"C",
+			[SNAKE_DEAD] = "xp"
+		},
+	},
+	/* currently do not use direction. */
+	[SNAKE_BODY_1] = {
+		[UP] = {
+			[SNAKE_ALIVE] = "[]",
+			[SNAKE_DEAD] = "[]"
+		},
+	},
+	[SNAKE_BODY_2] = {
+		[UP] = {
+			[SNAKE_ALIVE] = "{}",
+			[SNAKE_DEAD] = "{}"
+		},
+	},
+};
+
 void draw_snake()
 {
 	struct point p;
+	enum direction d;
+	enum snake_state s;
 
 	for(int i = 1; i < RING_COUNT(game_ctx.snake); i++) {
 		p = RING_PEEK(i, game_ctx.snake);
 		set_cursor_board(p.x * 2, p.y);
-		if (i % 2)
-			printf("[]");
-		else
-			printf("{}");
+		printf("%s", snake_sprite[SNAKE_BODY_1 + i % 2][UP][SNAKE_ALIVE]);
 	}
 
 	p = RING_PEEK_HEAD(game_ctx.snake);
-	switch (RING_PEEK_HEAD(game_ctx.direction)) {
-		case UP:
-			set_cursor_board(p.x * 2, p.y);
-			if (game_ctx.alive)
-				printf("(v)");
-			else
-				printf("xx");
-			break;
-		case DOWN:
-			if (game_ctx.alive) {
-				set_cursor_board(p.x * 2 - 1, p.y);
-				printf("(w)");
-			}
-			else {
-				set_cursor_board(p.x * 2, p.y);
-				printf("xx");
-			}
-			break;
-		case RIGHT:
-			set_cursor_board(p.x * 2, p.y);
-			if (game_ctx.alive)
-				printf("(v");
-			else
-				printf("xx");
-			break;
-		case LEFT:
-			set_cursor_board(p.x * 2, p.y);
-			if (game_ctx.alive)
-				printf("v)");
-			else
-				printf("xx");
-			break;
-	}
+	d = RING_PEEK_HEAD(game_ctx.direction);
+	s = game_ctx.alive ? SNAKE_ALIVE : SNAKE_DEAD;
+
+	set_cursor_board(p.x * 2, p.y);
+	printf("%s", snake_sprite[SNAKE_HEAD][d][s]);
 }
 
 void draw_border()
@@ -149,16 +166,56 @@ void draw_score()
 }
 
 /*
- * lists at most the `l` top entries. As such it needs n + 1 columns of space
+ * lists at most the `l` top entries.
+ *
  *
  *	     leaderboard
  * 	1. <name>........20
  *	2. <name>........10
  *	3. <looooooong>..5
  *
- * the scores are placed at column NAME_LEN + 2
+ * the scores are placed at column NAME_LEN + 2 after the numbering.
+ *
+ * TODO: something `min()` to accomodate small spaces.
+ * TODO: alignment when l > 9 (10. ).
+ * TODO: respect size bounds better.
  */
-void draw_leaderboard(struct point tl, struct point br, int n, int l)
+void draw_leaderboard(struct point tl, struct point br, int l)
 {
+	int h, w, p;
+	const char title[] = "leaderboard";
+	struct leaderboard_entry entry;
+	FILE *board = leaderboard_open();
 
+	if (!board)
+		return;
+
+	w = br.x - tl.x;
+	h = br.y - tl.x;
+
+	set_cursor_board(tl.x + ((w - sizeof(title) + 1) / 2), tl.y);
+	printf(SET_UNDERLINE "%s" SET_NORMAL, title);
+
+	for (int i = 1; i <= l || l == -1; i++) {
+		if (!(tl.y + i < h))
+			break;
+
+		if (!leaderboard_entry(board, &entry))
+			break;
+
+		set_cursor_board(tl.x, tl.y + i);
+		printf("%i. ", i);
+		p = printf("%s", entry.name);
+
+		/* - 3 - 3 refers to the first numbers columns assumed size and
+		 * the assumed max length of the score.
+		 * TODO: make not ugly.
+		 */
+		for (int j = p; j < MIN(NAME_LEN + 2, w - 3 - 3); j++)
+			printf(".");
+
+		printf("%i", entry.score);
+	}
+
+	fclose(board);
 }

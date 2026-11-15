@@ -6,8 +6,8 @@
 #include "draw.h"
 struct draw_ctx;
 
-#define WIDTH 12
-#define HEIGHT 12
+#define WIDTH 16
+#define HEIGHT 16
 
 enum direction {
 	UP,

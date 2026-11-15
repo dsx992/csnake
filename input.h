@@ -46,5 +46,7 @@ int input_getalnum(char *buf, size_t i);
 int input_init();
 /* cleans up */
 void input_finish();
+/* reads a single char into the buffer */
+int input_getchar();
 
 #endif

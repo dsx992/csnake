@@ -85,7 +85,6 @@ static void *listener(void *args)
 
 		pthread_mutex_unlock(&lock);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-
 	}
 
 	return NULL;
@@ -96,12 +95,15 @@ enum key key_parse()
 	/* the ring type is flexible enough (it is bidirectional) to work as a
 	 * stack */
 	char c, p;
-	int i, m;
+	int i, m, u;
 
+	u = 0;
 	for (m = 0; m < LENGTH(keymap); m++) {
 		for (i = 0; (p = keymap[m].pattern[i]); i++) {
-			if (RING_COUNT(ring) - i == 0)
-				return KEY_INVALID;
+			if (RING_COUNT(ring) - i <= 0) {
+				u = 1;
+				break;
+			}
 
 			c = RING_PEEK(i, ring);
 			/* input does not match pattern */
@@ -116,7 +118,11 @@ enum key key_parse()
 			return keymap[m].key;
 		}
 	}
-	
+
+	/* if at least one production stopped unexpectedly, wait for more */
+	if (u)
+		return KEY_INVALID;
+
 	/* unkonwn key, so remove the first character */
 	RING_REMOVE_HEAD(ring);
 

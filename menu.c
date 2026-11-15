@@ -28,6 +28,7 @@ static struct timespec t;
 enum menuitem menu()
 {
 	static enum menuitem m, n;
+	enum key k;
 	int e = 0;
 
 	t.tv_sec = 0;
@@ -53,7 +54,7 @@ enum menuitem menu()
 				printf("%s", items[i]);
 		}
 
-		switch (input_get_key()) {
+		switch ((k = input_get_key())) {
 			case KEY_ARROW_UP:
 				m = m ? m - 1 : m;
 				break;

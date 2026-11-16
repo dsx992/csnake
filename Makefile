@@ -1,4 +1,4 @@
-CC := gcc -std=c99
+CC := c99
 flags := -Wall -Wpedantic -g
 
 .PHONY: clean cleaner
@@ -6,8 +6,8 @@ flags := -Wall -Wpedantic -g
 default: snake
 
 
-snake: snake.c game.o menu.o input.o term.o draw.o leaderboard.o
-	$(CC) $(flags) -o snake snake.c game.o menu.o input.o term.o draw.o leaderboard.o
+snake: snake.c game.o menu.o input.o term.o draw.o leaderboard.o arena.o
+	$(CC) $(flags) -o snake snake.c game.o menu.o input.o term.o draw.o leaderboard.o arena.o
 
 menu.o: menu.c menu.h draw.o
 	$(CC) $(flags) -o menu.o -c menu.c
@@ -26,6 +26,9 @@ input.o: input.c input.h rings.h
 
 leaderboard.o: leaderboard.c leaderboard.h
 	$(CC) $(flags) -o leaderboard.o -c leaderboard.c
+
+arena.o: arena.c arena.h
+	$(CC) $(flags) -o arena.o -c arena.c
 
 clean:
 	rm -rf snake *.o

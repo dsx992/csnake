@@ -8,6 +8,7 @@
 
 struct draw_ctx;
 
+/* TODO: these should be set at runtime. Needs changing of RING as well. */
 #define WIDTH 16
 #define HEIGHT 16
 

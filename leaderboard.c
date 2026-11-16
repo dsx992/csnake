@@ -79,7 +79,7 @@ int leaderboard_commit(const char *name)
 		leaderboard_default();
 	}
 
-	strncpy(ge.name, name, NAME_LEN);
+	strcpy(ge.name, name);
 	ge.score = game_ctx.score;
 	ge.unix = t;
 
@@ -90,6 +90,10 @@ int leaderboard_commit(const char *name)
 		
 		write_entry(tmp, &le);
 	}
+	/* if score is lowest */
+	if (!inserted)
+		inserted = write_entry(tmp, &ge);
+
 
 	fclose(leader);
 	fclose(tmp);

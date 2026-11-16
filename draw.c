@@ -12,6 +12,8 @@ struct term_ctx;
 extern struct game_ctx game_ctx;
 extern struct term_ctx term_ctx;
 
+/* TODO: define drawing primitives and use those */
+
 void draw_clear()
 {
 	printf("\033[2J");
@@ -75,7 +77,7 @@ enum snake_state {
 	SNAKE_DEAD,
 };
 
-const static char *snake_sprite[SNAKE_BODY_2 + 1][RIGHT + 1][SNAKE_DEAD + 1] = {
+static const char *snake_sprite[SNAKE_BODY_2 + 1][RIGHT + 1][SNAKE_DEAD + 1] = {
 	[SNAKE_HEAD] = {
 		[UP] = {
 			[SNAKE_ALIVE] = ":U",
@@ -94,7 +96,9 @@ const static char *snake_sprite[SNAKE_BODY_2 + 1][RIGHT + 1][SNAKE_DEAD + 1] = {
 			[SNAKE_DEAD] = "xp"
 		},
 	},
-	/* currently do not use direction. */
+	/* currently do not use direction. In the future each snake point may
+	 * keep track of their direction, i.e., the direction from when they
+	 * were head. */
 	[SNAKE_BODY_1] = {
 		[UP] = {
 			[SNAKE_ALIVE] = "[]",

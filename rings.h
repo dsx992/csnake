@@ -20,6 +20,7 @@
  *
  * TODO: the TYPE data[SIZE] construct is not flexible enough, e.g., not
  * compile-time game dimensions.
+ * TODO: I think maybe an arena allocator would be good?
  */
 #define RING(NAME, TYPE, SIZE)		\
 	struct NAME {			\

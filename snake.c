@@ -1,9 +1,11 @@
 #include <stdio.h>
 
+#include "arena.h"
 #include "game.h"
-#include "menu.h"
 #include "input.h"
+#include "menu.h"
 #include "term.h"
+
 
 #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
 
@@ -22,6 +24,10 @@ int main()
 {
 	enum menuitem m;
 
+	arena_init(128);
+
+	return 0;
+
 	term_init();
 	m = MENUITEM_MENU;
 
@@ -32,5 +38,6 @@ int main()
 
 	printf("score: %i\n", game_ctx.score);
 
+	arena_finish();
 	return 0;
 }

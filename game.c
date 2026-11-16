@@ -29,6 +29,7 @@ static struct timespec s, t;
 enum menuitem game()
 {
 	enum key k;
+	enum menuitem m = MENUITEM_POST;
 
 	input_init();
 	reset_game_ctx();
@@ -40,8 +41,10 @@ enum menuitem game()
 
 		k = input_get_key();
 
-		if (!handle_key(k))
+		if (!handle_key(k)) {
+			m = MENUITEM_MENU;
 			break;
+		}
 
 		if (!move_snake())
 			game_ctx.alive = 0;
@@ -64,7 +67,7 @@ enum menuitem game()
 	}
 
 	input_finish();
-	return MENUITEM_POST;
+	return m;
 }
 
 static void grow()

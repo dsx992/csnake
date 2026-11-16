@@ -96,15 +96,20 @@ enum menuitem menu()
 	return m;
 }
 
-/* TODO: bug, does not always add entry? */
 enum menuitem postgame()
 {
 	int i, commit;
 	char c;
-	char name[NAME_LEN];
+	/* remember name between games */
+	static char name[NAME_LEN];
+	
+	draw_clear();
+	draw_border();
+	draw_snake();
+	draw_score();
 
 	commit = 0;
-	i = 0;
+	i = strlen(name);
 	while (i < sizeof(name) - 1) {
 		name[i] = 0;
 

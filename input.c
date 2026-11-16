@@ -15,6 +15,8 @@ pthread_t tid;
 static void *listener(void *args);
 enum key key_parse();
 
+/* TODO: add debounce */
+
 /* should not be used when input_init */
 int input_getchar()
 {

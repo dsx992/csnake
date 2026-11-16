@@ -19,10 +19,13 @@ extern struct game_ctx game_ctx;
 static const char *items[MENUITEM_END] = {
 	[MENUITEM_PLAY] = "play",
 	[MENUITEM_SCORE] = "leaderboard",
+	[MENUITEM_HELP] = "help",
 	[MENUITEM_QUIT] = "quit",
 };
 
 static struct timespec t;
+
+static int longestline(const char *str);
 
 /* returns 1 if play, 0 if quit */
 enum menuitem menu()
@@ -80,6 +83,7 @@ enum menuitem menu()
 	return m;
 }
 
+/* TODO: bug, does not always add entry? */
 void postgame()
 {
 	int i, commit;
@@ -95,9 +99,9 @@ void postgame()
 	commit = 0;
 	i = 0;
 	while (i < sizeof(name) - 1) {
-		set_cursor_board(2, HEIGHT / 2);
-
 		name[i] = 0;
+
+		set_cursor_board(2, HEIGHT / 2);
 		printf("name: "
 			SET_UNDERLINE "%-*s" SET_NORMAL
 			, NAME_LEN, name);
@@ -148,4 +152,89 @@ void leaderboard()
 	getchar();
 
 	input_init();
+}
+
+static const char helptxt[] =
+	"press q to go back to the menu or quit.\n\n"
+	"move with arrow keys, and select with enter.\n\n"
+	"press escape when entering your name to cancel; "
+	"your score will not be committed."
+	;
+
+void help()
+{
+	const char title[] = "help";
+	char c, word[16];
+	int col, row, n, width, newline, i;
+	const char *str;
+
+	input_finish();
+
+	draw_clear();
+	draw_border();
+
+	width = MIN(WIDTH * 2 - 4, longestline(helptxt));
+
+	set_cursor_board((WIDTH * 2 - sizeof(title)) / 2, 2);
+	printf(SET_UNDERLINE "%s" SET_NORMAL, title);
+
+	str = helptxt;
+	col = (WIDTH * 2 - width) / 2;
+	row = 4;
+	n = 0;
+	set_cursor_board(col, row);
+	do {
+		newline = 0;
+		/* get word */
+		for (i = 0; i < sizeof(word) - 1 && (c = str[i]); i++) {
+			if (c == '\n') {
+				word[i++] = 0;
+				newline = 1;
+				break;
+			} else if (isspace(c)) {
+				word[i] = c;
+				word[++i] = 0;
+				break;
+			}
+			word[i] = c;
+		}
+		word[i] = 0;
+
+		n += i;
+		if (!(n - 1 < width)) {
+			set_cursor_board(col, ++row);
+			n = i;
+			printf("%s", word);
+		} else if (newline) {
+			printf("%s", word);
+			n = 0;
+			set_cursor_board(col, ++row);
+		} else {
+			printf("%s", word);
+		}
+
+	} while (*(str+=i));
+
+	draw_flush();
+
+	getchar();
+	input_init();
+}
+
+static int longestline(const char *str)
+{
+	int i, l;
+	char c;
+	const char *s;
+
+	s = str;
+	l = 0;
+	do {
+		i = 0;
+		while ((c = s[i]) && c != '\n')
+			i++;
+		l = MAX(l, i);
+	} while (*(s+=(++i)));
+
+	return l;
 }

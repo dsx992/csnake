@@ -5,6 +5,8 @@
 #include "input.h"
 #include "term.h"
 
+#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+
 struct game_ctx;
 extern struct game_ctx game_ctx;
 
@@ -26,6 +28,9 @@ int main()
 				break;
 			case MENUITEM_SCORE:
 				leaderboard();
+				break;
+			case MENUITEM_HELP:
+				help();
 				break;
 			case MENUITEM_QUIT:
 			case MENUITEM_END:

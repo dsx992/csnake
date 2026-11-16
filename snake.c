@@ -10,32 +10,23 @@
 struct game_ctx;
 extern struct game_ctx game_ctx;
 
+static enum menuitem (*menus[MENUITEM_END])() = {
+	[MENUITEM_MENU] = &menu,
+	[MENUITEM_PLAY] = &game,
+	[MENUITEM_POST] = &postgame,
+	[MENUITEM_SCORE] = &leaderboard,
+	[MENUITEM_HELP] = &help,
+};
+
 int main()
 {
-	int quit = 0;
+	enum menuitem m;
 
 	term_init();
+	m = MENUITEM_MENU;
 
-	while (!quit) {
-		switch (menu()) {
-			case MENUITEM_PLAY:
-				game();
-				/* go to menu */
-				if (game_ctx.quit)
-					break;
-				postgame();
-				break;
-			case MENUITEM_SCORE:
-				leaderboard();
-				break;
-			case MENUITEM_HELP:
-				help();
-				break;
-			case MENUITEM_QUIT:
-			case MENUITEM_END:
-				quit = 1;
-		}
-	}
+	while (menus[m])
+		m = menus[m]();
 
 	term_finish();
 

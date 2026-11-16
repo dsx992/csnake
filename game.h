@@ -4,6 +4,8 @@
 #include "point.h"
 #include "rings.h"
 #include "draw.h"
+#include "menu.h"
+
 struct draw_ctx;
 
 #define WIDTH 16
@@ -26,6 +28,6 @@ struct game_ctx {
 	char collision[WIDTH][HEIGHT];
 };
 
-int game();
+enum menuitem game();
 
 #endif

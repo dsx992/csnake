@@ -27,11 +27,11 @@ static struct timespec t;
 
 static int longestline(const char *str);
 
-/* returns 1 if play, 0 if quit */
 enum menuitem menu()
 {
-	static enum menuitem m, n;
+	static enum menuitem m, mm, n;
 	enum key k;
+	int r;
 	int e = 0;
 
 	t.tv_sec = 0;
@@ -39,48 +39,65 @@ enum menuitem menu()
 
 	if (!n)
 		for (enum menuitem i = MENUITEM_PLAY; i < MENUITEM_END; i++)
-			n = MAX(n, sizeof(items[i]));
+			if (items[i])
+				n = MAX(n, sizeof(items[i]));
+
+	m = MAX(1, m);
 
 	draw_clear();
 	draw_border();
 	draw_score();
 
+	/* TODO: this should be a draw_* function */
 	while (!e) {
+		r = 0;
 		for (enum menuitem i = 0; i < MENUITEM_END; i++) {
-			set_cursor_board(WIDTH - (n / 2),
-					(HEIGHT / (2 * MENUITEM_END)) + 2 * i);
-			if (i == m)
-				printf(SET_UNDERLINE "%s" SET_NORMAL, items[i]);
-			else
-				printf("%s", items[i]);
+			if (items[i]) {
+				set_cursor_board(WIDTH - (n / 2),
+						4 + 2 * r);
+				if (i == m)
+					printf(SET_UNDERLINE "%s" SET_NORMAL,
+							items[i]);
+				else
+					printf("%s", items[i]);
+				r++;
+			}
 		}
+
+		draw_flush();
 
 		switch ((k = input_get_key())) {
 			case KEY_ARROW_UP:
-				m = m ? m - 1 : m;
+				mm = m;
+				while (--mm)
+					if (items[mm])
+						break;
+				if (items[mm])
+					m = mm;
 				break;
 			case KEY_ARROW_DOWN:
-				m = MIN(m + 1, MENUITEM_END - 1);
+				mm = m;
+				while ((++mm) < MENUITEM_END)
+					if (items[mm])
+						break;
+				if (items[mm])
+					m = mm;
 				break;
 			case KEY_CHAR_Q:
-				m = MENUITEM_QUIT;
-				e = 1;
-				break;
+				return MENUITEM_QUIT;
 			case KEY_ENTER:
 				e = 1;
 				break;
 			default:
 				input_getchar();
 		}
-
-		draw_flush();
 	}
 
 	return m;
 }
 
 /* TODO: bug, does not always add entry? */
-void postgame()
+enum menuitem postgame()
 {
 	int i, commit;
 	char c;
@@ -116,9 +133,10 @@ void postgame()
 
 	if (commit)
 		leaderboard_commit(name);
+	return MENUITEM_MENU;
 }
 
-void leaderboard()
+enum menuitem leaderboard()
 {
 	FILE *leader;
 	struct point tl = {4, 2};
@@ -136,6 +154,8 @@ void leaderboard()
 	draw_flush();
 
 	getchar();
+
+	return MENUITEM_MENU;
 }
 
 static const char helptxt[] =
@@ -145,7 +165,7 @@ static const char helptxt[] =
 	"your score will not be committed."
 	;
 
-void help()
+enum menuitem help()
 {
 	const char title[] = "help";
 	char c, word[16];
@@ -200,6 +220,8 @@ void help()
 	draw_flush();
 
 	getchar();
+
+	return MENUITEM_MENU;
 }
 
 static int longestline(const char *str)

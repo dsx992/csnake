@@ -7,6 +7,7 @@
 #include "game.h"
 #include "draw.h"
 #include "input.h"
+#include "menu.h"
 #include <time.h>
 #include <stdlib.h>
 
@@ -25,7 +26,7 @@ static void reset_game_ctx();
 
 static struct timespec s, t;
 
-int game()
+enum menuitem game()
 {
 	enum key k;
 
@@ -63,7 +64,7 @@ int game()
 	}
 
 	input_finish();
-	return 1;
+	return MENUITEM_POST;
 }
 
 static void grow()

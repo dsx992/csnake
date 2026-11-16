@@ -15,7 +15,6 @@ int main()
 	int quit = 0;
 
 	term_init();
-	input_init();
 
 	while (!quit) {
 		switch (menu()) {
@@ -39,7 +38,6 @@ int main()
 	}
 
 	term_finish();
-	input_finish();
 
 	printf("score: %i\n", game_ctx.score);
 

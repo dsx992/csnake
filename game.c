@@ -29,6 +29,7 @@ int game()
 {
 	enum key k;
 
+	input_init();
 	reset_game_ctx();
 
 	while(game_ctx.alive && !game_ctx.quit) {
@@ -61,6 +62,7 @@ int game()
 		nanosleep(&t, NULL);
 	}
 
+	input_finish();
 	return 1;
 }
 

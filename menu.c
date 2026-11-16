@@ -41,8 +41,6 @@ enum menuitem menu()
 		for (enum menuitem i = MENUITEM_PLAY; i < MENUITEM_END; i++)
 			n = MAX(n, sizeof(items[i]));
 
-	input_finish();
-
 	draw_clear();
 	draw_border();
 	draw_score();
@@ -78,8 +76,6 @@ enum menuitem menu()
 		draw_flush();
 	}
 
-	input_init();
-
 	return m;
 }
 
@@ -89,12 +85,6 @@ void postgame()
 	int i, commit;
 	char c;
 	char name[NAME_LEN];
-
-	/* TODO: maybe not the prettiest. Maybe need some more robust
-	 * modal mode? E.g.: input_set_text() and input_set_key()?
-	 * `readline` maybe?
-	 */
-	input_finish();
 
 	commit = 0;
 	i = 0;
@@ -124,8 +114,6 @@ void postgame()
 		draw_flush();
 	}
 
-	input_init();
-
 	if (commit)
 		leaderboard_commit(name);
 }
@@ -142,16 +130,12 @@ void leaderboard()
 	else
 		fclose(leader);
 
-	input_finish();
-	
 	draw_clear();
 	draw_border();
 	draw_leaderboard(tl, br, -1);
 	draw_flush();
 
 	getchar();
-
-	input_init();
 }
 
 static const char helptxt[] =
@@ -167,8 +151,6 @@ void help()
 	char c, word[16];
 	int col, row, n, width, newline, i;
 	const char *str;
-
-	input_finish();
 
 	draw_clear();
 	draw_border();
@@ -218,7 +200,6 @@ void help()
 	draw_flush();
 
 	getchar();
-	input_init();
 }
 
 static int longestline(const char *str)

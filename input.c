@@ -6,9 +6,11 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include "common.h"
 
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-static RING(, char, 2 << 8) ring;
+// static RING(, char, 2 << 8) ring;
+static RING(, char) ring;
 
 pthread_t tid;
 
@@ -25,15 +27,20 @@ int input_getchar()
 	return 1;
 }
 
-int input_init()
+int input_raw()
 {
 	return !pthread_create(&tid, NULL, &listener, NULL);
 }
 
-void input_finish()
+void input_blocking()
 {
 	pthread_cancel(tid);
+}
 
+int input_init()
+{
+	RING_INITIALIZE(ring, 2 << 8);
+	return ring.data != NULL;
 }
 
 enum key input_get_key()

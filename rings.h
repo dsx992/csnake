@@ -1,5 +1,9 @@
 #ifndef RINGS
 #define RINGS
+
+#include "arena.h"
+#include "stddef.h"
+
 /*
  * Ring datastructures.
  * `NAME` is the name of the resulting struct,
@@ -22,51 +26,58 @@
  * compile-time game dimensions.
  * TODO: I think maybe an arena allocator would be good?
  */
-#define RING(NAME, TYPE, SIZE)		\
+#define RING(NAME, TYPE)		\
 	struct NAME {			\
+		TYPE *data;		\
+		size_t size;		\
 		unsigned int count;	\
 		int head;		\
 		int tail;		\
-		TYPE data[SIZE];	\
 	}
-#define LENGTH(X) (sizeof(X) / sizeof(X[0]))
+#define RING_INITIALIZE(RING, SIZE) do {	\
+	RING.data = arena_malloc(sizeof(*(RING.data)) * SIZE);	\
+	RING.size = SIZE;			\
+	RING.count = 0;				\
+	RING.head = 0;				\
+	RING.tail = 0;				\
+} while (0)
 #define RING_COUNT(RING) RING.count
 #define RING_PUSH_TAIL(X, R) do {		\
 	R.data[R.tail] = X;			\
-	R.tail = (R.tail + 1) % LENGTH(R.data);	\
-	if (R.count == LENGTH(R.data))			\
-		R.head = (R.head + 1) % LENGTH(R.data);	\
+	R.tail = (R.tail + 1) % R.size;	\
+	if (R.count == R.size)			\
+		R.head = (R.head + 1) % R.size;	\
 	else					\
 		R.count++;			\
 } while (0)
 #define RING_PUSH_HEAD(X, R) do {		\
 	R.head = R.head - 1 < 0			\
-		? LENGTH(R.data) - 1		\
+		? R.size - 1		\
 		: (R.head - 1);			\
 	R.data[R.head] = X;			\
-	if (R.count == LENGTH(R.data))		\
+	if (R.count == R.size)		\
 		R.tail = R.tail - 1 < 0		\
-			? LENGTH(R.data) - 1	\
+			? R.size - 1	\
 			: (R.tail - 1);		\
 	else					\
 		R.count++;			\
 } while (0)
-#define RING_PEEK(I, R) (R.data[(R.head + I) % LENGTH(R.data)])
+#define RING_PEEK(I, R) (R.data[(R.head + I) % R.size])
 #define RING_PEEK_HEAD(R) (R.data[R.head])
 #define RING_PEEK_TAIL(R)			\
 	(R.data[R.tail - 1 < 0			\
-	 	? LENGTH(R.data) - 1		\
+		? R.size - 1			\
 	 	: R.tail - 1])
 #define RING_REMOVE_HEAD(R) do {		\
 	if (RING_COUNT(R) > 0) {		\
-		R.head = (R.head + 1) % LENGTH(R.data);	\
+		R.head = (R.head + 1) % R.size;	\
 		R.count--; 			\
 	}					\
 } while (0)
 #define RING_REMOVE_TAIL(R) do {		\
 	if (RING_COUNT(R) > 0) {		\
 		R.tail = R.tail - 1 < 0		\
-		? LENGTH(R.data) - 1		\
+		? R.size - 1		\
 		: R.tail - 1;			\
 		R.count--; 			\
 	}					\

@@ -8,10 +8,6 @@
 
 struct draw_ctx;
 
-/* TODO: these should be set at runtime. Needs changing of RING as well. */
-#define WIDTH 16
-#define HEIGHT 16
-
 enum direction {
 	UP,
 	DOWN,
@@ -20,14 +16,22 @@ enum direction {
 };
 
 struct game_ctx {
+	/* set in main by argv*/
+	int w, h;
 	int alive;
 	int score;
 	int quit;
+	int tickrate;
 	struct point apple;
-	RING( , struct point, WIDTH * HEIGHT) snake;
-	RING( , enum direction, 2) direction;
-	char collision[WIDTH][HEIGHT];
+	// RING( , struct point, WIDTH * HEIGHT) snake;
+	// RING( , enum direction, 2) direction;
+	RING( , struct point) snake;
+	RING( , enum direction) direction;
+	enum direction previous_direction;
+	// char collision[WIDTH][HEIGHT];
+	char *collision;
 };
+void initialize_game_ctx();
 
 enum menuitem game();
 

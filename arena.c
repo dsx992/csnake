@@ -43,14 +43,15 @@ void arena_finish()
 
 void *arena_malloc(size_t size)
 {
-	void *ptr;
+	void *old, *new;
 
-	ptr = (char *)arena.head + size;
+	old = arena.head;
+	new = (char *)old + size;
 
-	if (ptr > arena.end)
+	if (new > arena.end)
 		return NULL;
 
-	arena.head = ptr;
+	arena.head = new;
 	
-	return arena.head;
+	return old;
 }

@@ -53,7 +53,7 @@ enum menuitem menu()
 		r = 0;
 		for (enum menuitem i = 0; i < MENUITEM_END; i++) {
 			if (items[i]) {
-				set_cursor_board(WIDTH - (n / 2),
+				set_cursor_board(game_ctx.w - (n / 2),
 						4 + 2 * r);
 				if (i == m)
 					printf(SET_UNDERLINE "%s" SET_NORMAL,
@@ -113,7 +113,7 @@ enum menuitem postgame()
 	while (i < sizeof(name) - 1) {
 		name[i] = 0;
 
-		set_cursor_board(2, HEIGHT / 2);
+		set_cursor_board(2, game_ctx.h / 2);
 		printf("name: "
 			SET_UNDERLINE "%-*s" SET_NORMAL
 			, NAME_LEN, name);
@@ -145,7 +145,7 @@ enum menuitem leaderboard()
 {
 	FILE *leader;
 	struct point tl = {4, 2};
-	struct point br = {WIDTH * 2 - 1, HEIGHT - 1};
+	struct point br = {game_ctx.w * 2 - 1, game_ctx.h - 1};
 
 	leader = leaderboard_open();
 	if (!leader)
@@ -180,13 +180,13 @@ enum menuitem help()
 	draw_clear();
 	draw_border();
 
-	width = MIN(WIDTH * 2 - 4, longestline(helptxt));
+	width = MIN(game_ctx.w * 2 - 4, longestline(helptxt));
 
-	set_cursor_board((WIDTH * 2 - sizeof(title)) / 2, 2);
+	set_cursor_board((game_ctx.w * 2 - sizeof(title)) / 2, 2);
 	printf(SET_UNDERLINE "%s" SET_NORMAL, title);
 
 	str = helptxt;
-	col = (WIDTH * 2 - width) / 2;
+	col = (game_ctx.w * 2 - width) / 2;
 	row = 4;
 	n = 0;
 	set_cursor_board(col, row);

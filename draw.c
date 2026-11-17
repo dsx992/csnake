@@ -57,8 +57,8 @@ int set_cursor(int x, int y)
 int set_cursor_board(int x, int y)
 {
 	int tx, ty;
-	tx = (term_ctx.w / 2) - (WIDTH);
-	ty = (term_ctx.h / 2) - (HEIGHT / 2);
+	tx = (term_ctx.w / 2) - (game_ctx.w);
+	ty = (term_ctx.h / 2) - (game_ctx.h / 2);
 
 	x = MAX(0, (MIN(tx + x, term_ctx.w)));
 	y = MAX(0, (MIN(ty + y, term_ctx.h)));
@@ -119,14 +119,18 @@ void draw_snake()
 	enum direction d;
 	enum snake_state s;
 
+	/* draw body */
 	for(int i = 1; i < RING_COUNT(game_ctx.snake); i++) {
 		p = RING_PEEK(i, game_ctx.snake);
 		set_cursor_board(p.x * 2, p.y);
 		printf("%s", snake_sprite[SNAKE_BODY_1 + i % 2][UP][SNAKE_ALIVE]);
 	}
 
+	/* draw head */
 	p = RING_PEEK_HEAD(game_ctx.snake);
-	d = RING_PEEK_HEAD(game_ctx.direction);
+	d = RING_COUNT(game_ctx.direction)
+		? RING_PEEK_HEAD(game_ctx.direction)
+		: game_ctx.previous_direction;
 	s = game_ctx.alive ? SNAKE_ALIVE : SNAKE_DEAD;
 
 	set_cursor_board(p.x * 2, p.y);
@@ -137,20 +141,20 @@ void draw_border()
 {
 	/* top bar */
 	set_cursor_board(-1, -1);
-	for (int i = 0; i < WIDTH + 1; i++)
+	for (int i = 0; i < game_ctx.w + 1; i++)
 		printf("##");
 
 	/* left and right columns */
-	for (int i = 0; i < HEIGHT; i++) {
+	for (int i = 0; i < game_ctx.h; i++) {
 		set_cursor_board(-1, i);
 		printf("#");
-		set_cursor_board(WIDTH * 2, i);
+		set_cursor_board(game_ctx.w * 2, i);
 		printf("#");
 	}
 
 	/* bottom bar */
-	set_cursor_board(-1, HEIGHT);
-	for (int i = 0; i < WIDTH + 1; i++)
+	set_cursor_board(-1, game_ctx.h);
+	for (int i = 0; i < game_ctx.w + 1; i++)
 		printf("##");
 }
 
@@ -165,7 +169,7 @@ void draw_score()
 	if (RING_COUNT(game_ctx.snake) == 0)
 		return;
 
-	set_cursor_board(WIDTH - 4, -2);
+	set_cursor_board(game_ctx.w - 4, -2);
 	printf("score: %i", game_ctx.score);
 }
 

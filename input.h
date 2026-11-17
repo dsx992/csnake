@@ -42,10 +42,10 @@ const static struct {
 enum key input_get_key();
 /* Writes the next alphanumerical char to buf. returns 0 if not alnum. */
 int input_getalnum(char *buf, size_t i);
-/* sets up terminal and key listener thread */
+/* OLD: sets up terminal and key listener thread */
 int input_init();
-/* cleans up */
-void input_finish();
+int input_raw();
+void input_blocking();
 /* reads a single char into the buffer */
 int input_getchar();
 

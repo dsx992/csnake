@@ -40,8 +40,6 @@ const static struct {
 
 /* returns (char)NULL if there is no input */
 enum key input_get_key();
-/* Writes the next alphanumerical char to buf. returns 0 if not alnum. */
-int input_getalnum(char *buf, size_t i);
 /* OLD: sets up terminal and key listener thread */
 int input_init();
 int input_raw();

@@ -9,7 +9,6 @@
 #include "common.h"
 
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-// static RING(, char, 2 << 8) ring;
 static RING(, char) ring;
 
 pthread_t tid;
@@ -52,34 +51,6 @@ enum key input_get_key()
 
 	pthread_mutex_unlock(&lock);
 	return k;
-}
-
-int input_getalnum(char *buf, size_t i)
-{
-	int r;
-	char c;
-
-	pthread_mutex_lock(&lock);
-
-	if (RING_COUNT(ring) == 0) {
-		r = -1;
-		c = 0;
-	} else {
-		c = RING_PEEK_HEAD(ring);
-		RING_REMOVE_HEAD(ring);
-	}
-
-	pthread_mutex_unlock(&lock);
-
-	if (c) {
-		if ((r = isalnum(c)))
-			buf[i] = c;
-
-		if (c == '\n')
-			 r = 0;
-	}
-
-	return r;
 }
 
 static void *listener(void *args)

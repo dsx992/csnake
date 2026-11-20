@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 199309L
+#include "common.h"
 #include "menu.h"
 #include "game.h"
 #include "draw.h"
@@ -9,9 +9,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
-#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 
 struct game_ctx;
 extern struct game_ctx game_ctx;
@@ -27,6 +24,22 @@ static struct timespec t;
 
 static int longestline(const char *str);
 
+enum key {
+	KEY_CHAR_Q,
+	KEY_ARROW_UP,
+	KEY_ARROW_DOWN,
+	KEY_ENTER,
+	KEY_ESC,
+};
+
+
+static struct keymap keymap[] = {
+	{"\033[A"	, KEY_ARROW_UP},
+	{"\033[B"	, KEY_ARROW_DOWN},
+	{"\033"		, KEY_ESC},
+	{"\n"		, KEY_ENTER},
+	{"q"		, KEY_CHAR_Q},
+};
 enum menuitem menu()
 {
 	static enum menuitem m, mm, n;
@@ -66,7 +79,7 @@ enum menuitem menu()
 
 		draw_flush();
 
-		switch ((k = input_get_key())) {
+		switch ((k = input_getkey(keymap, LENGTH(keymap)))) {
 			case KEY_ARROW_UP:
 				mm = m;
 				while (--mm)
@@ -83,13 +96,12 @@ enum menuitem menu()
 				if (items[mm])
 					m = mm;
 				break;
+			case KEY_ESC:
 			case KEY_CHAR_Q:
 				return MENUITEM_QUIT;
 			case KEY_ENTER:
 				e = 1;
 				break;
-			default:
-				input_getchar();
 		}
 	}
 

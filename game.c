@@ -18,6 +18,15 @@
 
 volatile struct game_ctx game_ctx;
 
+enum key {
+	KEY_CHAR_Q,
+	KEY_ARROW_UP,
+	KEY_ARROW_DOWN,
+	KEY_ARROW_LEFT,
+	KEY_ARROW_RIGHT,
+	KEY_ESC,
+};
+
 static void grow();
 static int eat();
 static void move_apple();
@@ -27,13 +36,22 @@ static void reset_game_ctx();
 
 static struct timespec s, t;
 
+static struct keymap keymap[] = {
+	{"\033[A"	, KEY_ARROW_UP},
+	{"\033[B"	, KEY_ARROW_DOWN},
+	{"\033[C"	, KEY_ARROW_RIGHT},
+	{"\033[D"	, KEY_ARROW_LEFT},
+	{"\033"		, KEY_ESC},
+	{"q"		, KEY_CHAR_Q},
+};
+
 enum menuitem game()
 {
 	enum key k;
 	enum menuitem m = MENUITEM_POST;
 
 	reset_game_ctx();
-	input_raw();
+	input_setreal(keymap, LENGTH(keymap));
 
 	while(game_ctx.alive && !game_ctx.quit) {
 		clock_gettime(CLOCK_REALTIME, &s);
@@ -50,7 +68,7 @@ enum menuitem game()
 		t.tv_nsec = (1000000000 / game_ctx.tickrate) - (t.tv_nsec - s.tv_nsec);
 		nanosleep(&t, NULL);
 
-		k = input_get_key();
+		k = input_get();
 
 		if (!handle_key(k)) {
 			m = MENUITEM_MENU;
@@ -67,7 +85,7 @@ enum menuitem game()
 		}
 	}
 
-	input_blocking();
+	input_setnoreal();
 	return m;
 }
 
@@ -201,10 +219,7 @@ static int handle_key(enum key k)
 			if (RING_PEEK_TAIL(game_ctx.direction) != LEFT)
 				RING_PUSH_TAIL(RIGHT, game_ctx.direction);
 			break;
-		case KEY_ENTER:
-		case KEY_INVALID:
-		case KEY_UNKNOWN:
-			break;
+		case KEY_ESC:
 		case KEY_CHAR_Q:
 			game_ctx.quit = 1;
 			return 0;

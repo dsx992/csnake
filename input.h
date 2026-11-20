@@ -9,42 +9,39 @@
  *
  * This file exposes:
  *	`input_get_key()`: returns the next key parsed from the internal buffer.
- * 	`input_init()`: sets up a listener thread that continuously runs `getchar()` and places the result in the internal buffer.
+ * 	`input_init()`: sets up a listener thread that continuously runs
+ * 	`getchar()` and places the result in the internal buffer.
  *	`input_finish()`: kills the listener thread.
  */
 
-enum key {
-	/* parser error */
-	KEY_INVALID,
-	/* unknown symbol */
-	KEY_UNKNOWN,
-	KEY_CHAR_Q,
-	KEY_ARROW_UP,
-	KEY_ARROW_DOWN,
-	KEY_ARROW_LEFT,
-	KEY_ARROW_RIGHT,
-	KEY_ENTER,
+/*
+ * The input set of functions provide a way to parse characters continously
+ * from stdin.
+ *
+ * `input_setreal()` starts a thread that parses input. This is nessecary to
+ * handle control sequences where the only delimiter is the rate of the
+ * character stream.
+ *
+ * `input_get()` gets a key when `input_setreal()` is set.
+ *
+ * `input_getkey()` gets a character when `input_setnoreal()` is set. It is
+ * then required to provide a keymap. If canonical is set or the stream is not
+ * empty at invocation then parsing may fail (see `input_setreal()`).
+ */
+
+/*
+ * The underlying parser should take any keymap being a char * to enum map.
+ * Escape sequences should automatically result in a debounce.
+ */
+struct keymap {
+	const char *pattern;
+	int bind;
 };
 
-const static struct {
-	const char* pattern;
-	const enum key key;
-} keymap[] = {
-	{"\033[A"	, KEY_ARROW_UP},
-	{"\033[B"	, KEY_ARROW_DOWN},
-	{"\033[C"	, KEY_ARROW_RIGHT},
-	{"\033[D"	, KEY_ARROW_LEFT},
-	{"\n"		, KEY_ENTER},
-	{"q"		, KEY_CHAR_Q},
-};
-
-/* returns (char)NULL if there is no input */
-enum key input_get_key();
-/* OLD: sets up terminal and key listener thread */
+int input_get();
+int input_getkey(struct keymap *keymap, size_t size);
+int input_setreal(struct keymap *keymap, size_t size);
+int input_setnoreal();
 int input_init();
-int input_raw();
-void input_blocking();
-/* reads a single char into the buffer */
-int input_getchar();
 
 #endif

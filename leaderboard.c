@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 199309L
+#include "common.h"
 #include "leaderboard.h"
 #include "game.h"
 #include <stdio.h>

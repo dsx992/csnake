@@ -7,5 +7,8 @@ struct term_ctx {
 
 int term_init();
 int term_finish();
+int term_isblocking();
+void term_setblocking();
+void term_setnotblocking();
 
 #endif

@@ -22,6 +22,7 @@ struct game_ctx {
 	int score;
 	int quit;
 	int tickrate;
+	unsigned int seed;
 	struct point apple;
 	// RING( , struct point, WIDTH * HEIGHT) snake;
 	// RING( , enum direction, 2) direction;

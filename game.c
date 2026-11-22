@@ -11,6 +11,7 @@
 #include "menu.h"
 #include <time.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define DEFAULT_WIDTH 16
 #define DEFAULT_HEIGHT 16
@@ -108,6 +109,8 @@ void initialize_game_ctx()
 	 RING_INITIALIZE(game_ctx.snake, game_ctx.w * game_ctx.h);
 	 RING_INITIALIZE(game_ctx.direction, 2);
 	 game_ctx.collision = arena_malloc(game_ctx.w * game_ctx.h);
+	 game_ctx.seed = (unsigned int)time(NULL);
+	 srand(game_ctx.seed);
 
 	initialized = 1;
 }

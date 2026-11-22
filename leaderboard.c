@@ -77,6 +77,9 @@ int leaderboard_commit(const char *name)
 
 	if (!leader) {
 		leaderboard_default();
+		leader = fopen(LEADERBOARD, "r");
+		if (!leader)
+			goto done;
 	}
 
 	strcpy(ge.name, name);

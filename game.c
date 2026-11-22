@@ -51,7 +51,10 @@ enum menuitem game()
 	enum menuitem m = MENUITEM_POST;
 
 	reset_game_ctx();
-	input_setreal(keymap, LENGTH(keymap));
+
+	input_flush();
+	input_setblocking(0);
+	input_setkeymap(keymap, LENGTH(keymap));
 
 	while(game_ctx.alive && !game_ctx.quit) {
 		clock_gettime(CLOCK_REALTIME, &s);
@@ -68,7 +71,7 @@ enum menuitem game()
 		t.tv_nsec = (1000000000 / game_ctx.tickrate) - (t.tv_nsec - s.tv_nsec);
 		nanosleep(&t, NULL);
 
-		k = input_get();
+		k = input_getkey();
 
 		if (!handle_key(k)) {
 			m = MENUITEM_MENU;
@@ -85,7 +88,6 @@ enum menuitem game()
 		}
 	}
 
-	input_setnoreal();
 	return m;
 }
 
@@ -116,7 +118,6 @@ static void grow()
 	RING_PUSH_TAIL(t, game_ctx.snake);
 }
 
-/* TODO: snake doesn't eat right anymore */
 static int eat()
 {
 	struct point h = RING_PEEK_HEAD(game_ctx.snake);
@@ -136,7 +137,6 @@ static void move_apple()
 	y = rand() % game_ctx.h;
 	for (i = 0; i < game_ctx.w; i++)
 		for (j = 0; j < game_ctx.h; i++)
-			// if (!game_ctx.collision[(x + i) % WIDTH][(y + j) % HEIGHT])
 			if (!game_ctx.collision[(x + i) % game_ctx.w +
 					((y + j) % game_ctx.h) * game_ctx.w])
 				goto done;

@@ -29,17 +29,19 @@ enum key {
 	KEY_ARROW_UP,
 	KEY_ARROW_DOWN,
 	KEY_ENTER,
+	KEY_DEL,
 	KEY_ESC,
 };
 
 
-static struct keymap keymap[] = {
+static struct keymap menu_keymap[] = {
 	{"\033[A"	, KEY_ARROW_UP},
 	{"\033[B"	, KEY_ARROW_DOWN},
 	{"\033"		, KEY_ESC},
 	{"\n"		, KEY_ENTER},
 	{"q"		, KEY_CHAR_Q},
 };
+
 enum menuitem menu()
 {
 	static enum menuitem m, mm, n;
@@ -49,6 +51,10 @@ enum menuitem menu()
 
 	t.tv_sec = 0;
 	t.tv_nsec = 1000000000 / 60;
+
+	input_flush();
+	input_setblocking(1);
+	input_setkeymap(menu_keymap, LENGTH(menu_keymap));
 
 	if (!n)
 		for (enum menuitem i = MENUITEM_PLAY; i < MENUITEM_END; i++)
@@ -79,7 +85,7 @@ enum menuitem menu()
 
 		draw_flush();
 
-		switch ((k = input_getkey(keymap, LENGTH(keymap)))) {
+		switch ((k = input_getkey())) {
 			case KEY_ARROW_UP:
 				mm = m;
 				while (--mm)
@@ -102,27 +108,42 @@ enum menuitem menu()
 			case KEY_ENTER:
 				e = 1;
 				break;
+			default:
+				break;
 		}
 	}
 
 	return m;
 }
 
+static struct keymap postgame_keymap[] = {
+	{"\033"		, KEY_ESC},
+	{"\n"		, KEY_ENTER},
+	{"\x7f"		, KEY_DEL},
+};
+
 enum menuitem postgame()
 {
 	int i, commit;
+	int lemmeout;
+	int k;
 	char c;
 	/* remember name between games */
 	static char name[NAME_LEN];
 	
+	input_flush();
+	input_setblocking(1);
+	input_setkeymap(postgame_keymap, LENGTH(postgame_keymap));
+
 	draw_clear();
 	draw_border();
 	draw_snake();
 	draw_score();
 
 	commit = 0;
+	lemmeout = 0;
 	i = strlen(name);
-	while (i < sizeof(name) - 1) {
+	while (!lemmeout) {
 		name[i] = 0;
 
 		set_cursor_board(2, game_ctx.h / 2);
@@ -130,22 +151,25 @@ enum menuitem postgame()
 			SET_UNDERLINE "%-*s" SET_NORMAL
 			, NAME_LEN, name);
 
-		c = getchar();
-
-		/* still want the drawing, so no break */
-		if (c == '\n') {
-			commit = 1;
-			break;
-		} else if (c == '\033') {
-			break;
-		} else if (c == 0x7f) {
-			/* delete */
-			i--;
-		} else if (isalnum(c)) {
-			name[i++] = c;
-		}
-
 		draw_flush();
+
+		switch ((k = input_getkey())) {
+			case KEY_ESC:
+				lemmeout = 1;
+				break;
+			case KEY_ENTER:
+				commit = 1;
+				lemmeout = 1;
+				break;
+			case KEY_DEL:
+				i = MAX(0, i - 1);
+				break;
+			default:
+				c = (char)k ^ 0xff;
+				if (isalnum(c) && i < NAME_LEN)
+					name[i++] = c;
+				break;
+		}
 	}
 
 	if (commit)
@@ -159,6 +183,10 @@ enum menuitem leaderboard()
 	struct point tl = {4, 2};
 	struct point br = {game_ctx.w * 2 - 1, game_ctx.h - 1};
 
+	input_flush();
+	input_setblocking(1);
+	input_setkeymap(NULL, 0);
+
 	leader = leaderboard_open();
 	if (!leader)
 		leaderboard_default();
@@ -170,7 +198,7 @@ enum menuitem leaderboard()
 	draw_leaderboard(tl, br, -1);
 	draw_flush();
 
-	getchar();
+	input_getkey();
 
 	return MENUITEM_MENU;
 }
@@ -188,6 +216,10 @@ enum menuitem help()
 	char c, word[16];
 	int col, row, n, width, newline, i;
 	const char *str;
+
+	input_flush();
+	input_setblocking(1);
+	input_setkeymap(NULL, 0);
 
 	draw_clear();
 	draw_border();
@@ -236,7 +268,7 @@ enum menuitem help()
 
 	draw_flush();
 
-	getchar();
+	input_getkey();
 
 	return MENUITEM_MENU;
 }

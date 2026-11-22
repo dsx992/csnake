@@ -1,5 +1,4 @@
-#define _POSIX_C_SOURCE 2
-
+#include "common.h"
 #include "arena.h"
 #include "game.h"
 #include "input.h"
@@ -68,6 +67,7 @@ int main(int argc, char *argv[])
 
 	term_finish();
 	arena_finish();
+
 	return 0;
 }
 

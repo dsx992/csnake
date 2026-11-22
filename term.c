@@ -10,47 +10,6 @@ volatile struct term_ctx term_ctx;
 
 static struct termios original_term;
 static struct termios current_term;
-static int blocking;
-
-int term_isblocking()
-{
-	return blocking;
-}
-
-void term_setwaitkey(unsigned char num)
-{
-	current_term.c_cc[VTIME] = 1;
-	current_term.c_cc[VMIN] = num;
-
-	tcsetattr(STDIN_FILENO, TCSANOW, &current_term);
-}
-
-void term_setnowaitkey()
-{
-	current_term.c_cc[VTIME] = 0;
-	current_term.c_cc[VMIN] = 1;
-
-	tcsetattr(STDIN_FILENO, TCSANOW, &current_term);
-}
-
-void term_setnotblocking()
-{
-	current_term.c_cc[VTIME] = 1;
-	current_term.c_cc[VMIN] = 0;
-
-	tcsetattr(STDIN_FILENO, TCSANOW, &current_term);
-	blocking = 0;
-}
-
-void term_setblocking()
-{
-	current_term.c_cc[VTIME] = 0;
-	current_term.c_cc[VMIN] = 1;
-
-	tcsetattr(STDIN_FILENO, TCSANOW, &current_term);
-	blocking = 1;
-
-}
 
 // When the window size changes, a SIGWINCH signal is sent to the foreground process group.
 static void term_get_size()
@@ -76,8 +35,6 @@ int term_init()
 	printf("\033[?1049h");
 	/* hides cursor. ?25h to show */
 	printf("\033[?25l");
-
-	blocking = 1;
 
 	term_get_size();
 	/* TODO: signal */

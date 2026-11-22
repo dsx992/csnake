@@ -39,8 +39,8 @@ struct keymap {
 };
 
 int input_get();
-int input_getkey(struct keymap *keymap, size_t size);
-int input_setreal(struct keymap *keymap, size_t size);
+int input_getkey(const struct keymap *keymap, size_t size);
+int input_setreal(const struct keymap *keymap, size_t size);
 int input_setnoreal();
 int input_init();
 

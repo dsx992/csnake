@@ -17,6 +17,22 @@ int term_isblocking()
 	return blocking;
 }
 
+void term_setwaitkey(unsigned char num)
+{
+	current_term.c_cc[VTIME] = 1;
+	current_term.c_cc[VMIN] = num;
+
+	tcsetattr(STDIN_FILENO, TCSANOW, &current_term);
+}
+
+void term_setnowaitkey()
+{
+	current_term.c_cc[VTIME] = 0;
+	current_term.c_cc[VMIN] = 1;
+
+	tcsetattr(STDIN_FILENO, TCSANOW, &current_term);
+}
+
 void term_setnotblocking()
 {
 	current_term.c_cc[VTIME] = 1;

@@ -61,8 +61,8 @@ enum menuitem menu()
 	draw_border();
 	draw_score();
 
-	/* TODO: this should be a draw_* function */
 	while (!e) {
+		/* TODO: this should be a draw_* function */
 		r = 0;
 		for (enum menuitem i = 0; i < MENUITEM_END; i++) {
 			if (items[i]) {

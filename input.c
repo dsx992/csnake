@@ -11,7 +11,7 @@
 
 struct listen_ctx {
 	int running;
-	struct keymap *keymap;
+	const struct keymap *keymap;
 	size_t size;
 };
 
@@ -21,14 +21,12 @@ static struct listen_ctx listen_ctx;
 pthread_t tid;
 
 
-static int parse(struct keymap *keymap, size_t size);
+static int parse(const struct keymap *keymap, size_t size);
 static void *listener(void *args);
 
 int input_get()
 {
 	int k;
-
-	pthread_mutex_lock(&lock);
 
 	if (RING_COUNT(keys)) {
 		k = RING_PEEK_HEAD(keys);
@@ -37,16 +35,15 @@ int input_get()
 		k = -1;
 	}
 
-	pthread_mutex_unlock(&lock);
-
 	return k;
 }
-int input_getkey(struct keymap *keymap, size_t size)
+int input_getkey(const struct keymap *keymap, size_t size)
 {
-	return parse(keymap, size);
+	int k = parse(keymap, size);
+	return k;
 }
 
-int input_setreal(struct keymap *keymap, size_t size)
+int input_setreal(const struct keymap *keymap, size_t size)
 {
 	if (listen_ctx.running)
 		return 0;
@@ -86,57 +83,36 @@ int input_init()
 	return keys.data != NULL;
 }
 
-static int parse(struct keymap *keymap, size_t size)
+static int parse(const struct keymap *keymap, size_t size)
 {
 	char buf[16];
-	int count = 0;
-	int m, i, bind;
+	int count;
+	int bind;
 	int blocking;
 	char c, p;
 
 	bind = -1;
+	count = 0;
 	blocking = term_isblocking();
-	c = getchar();
-	buf[count++] = c;
 
-	term_setnotblocking();
+	term_setwaitkey(sizeof(buf) - 1);
+	count = read(STDIN_FILENO, buf, sizeof(buf) - 1);
+	term_setnowaitkey();
+	buf[count++] = 0;
 
-	for (m = 0; m < size && (bind < 0); m++) {
-		i = 0;
-		for (i = 0; ; i++) {
+	for (int m = 0; m < size && bind < 0 && count; m++) {
+		for (int i = 0; i < count ; i++) {
 			p = keymap[m].pattern[i];
-			/* if we are waiting for a new character */
-			if (i >= count)
-				buf[count++] = getchar();
-			/* if we timed out */
-			if (buf[i] == EOF)
-				break;
-			if (p == '\0')
-				break;
-			if (p != buf[i])
-				break;
+			c = buf[i];
 
+			if (p == '\0' && c == 0) {
+				bind = keymap[m].bind;
+				break;
+			}
+
+			if (p != c)
+				break;
 		}
-
-		/* we expect to always time out between keystrokes */
-		if (buf[i] == EOF && p == )
-
-		if (i == count && c == EOF && p == '\0')
-			bind = keymap[m].bind;
-		
-
-		// for (i = 0; i < count; i++) {
-		// 	p = keymap[m].pattern[i];
-		// 	if (p == '\0')
-		// 		break;
-		// 	if (p != buf[i])
-		// 		break;
-		// }
-		// c = getchar();
-		// /* key sequence over, success */
-		// if (i == count && c == EOF && p == '\0')
-		// 	bind = keymap[m].bind;
-		// buf[count++] = getchar();
 	}
 
 	if (blocking)
@@ -151,12 +127,10 @@ static void *listener(void *args)
 
 	while(1) {
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-		pthread_mutex_lock(&lock);
 
-		if ((k = parse(listen_ctx.keymap, listen_ctx.size)) != 1)
+		if ((k = parse(listen_ctx.keymap, listen_ctx.size)) != -1)
 			RING_PUSH_TAIL(k, keys);
 
-		pthread_mutex_unlock(&lock);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 	}
 
